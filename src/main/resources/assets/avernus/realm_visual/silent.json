@@ -1,0 +1,8 @@
+{
+  "solid_texture": "avernus:block/realm/silent",
+  "mirror_texture": "avernus:textures/item/mirror/silent.png",
+  "water_color": "#2A5AA8",
+  "tint": "#78AAFF",
+  "fog_color": "#0C1630",
+  "fog_distance": 56.0
+}

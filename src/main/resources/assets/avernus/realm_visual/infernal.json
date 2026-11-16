@@ -1,0 +1,8 @@
+{
+  "solid_texture": "avernus:block/realm/infernal",
+  "mirror_texture": "avernus:textures/item/mirror/infernal.png",
+  "water_color": "#C2501A",
+  "tint": "#FF8A3A",
+  "fog_color": "#3A1206",
+  "fog_distance": 40.0
+}

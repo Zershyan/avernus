@@ -1,0 +1,8 @@
+{
+  "type": "avernus:mirror_trait",
+  "material": {
+    "item": "minecraft:netherite_ingot"
+  },
+  "remove": true,
+  "trait": "avernus:boundless"
+}

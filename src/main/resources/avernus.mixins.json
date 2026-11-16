@@ -1,0 +1,35 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.zershyan.avernus.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "io.zershyan.avernus.mixin.AvernusMixinPlugin",
+  "mixins": [
+    "common.AbstractArrowMixin",
+    "common.BlockCollisionsMixin",
+    "common.ClipContextMixin",
+    "common.EndermanTakeBlockGoalMixin",
+    "common.EntityMixin",
+    "common.FallingBlockMixin",
+    "common.FireBlockMixin",
+    "common.FlowingFluidMixin",
+    "common.LivingEntityMixin",
+    "common.PathNavigationRegionAccessor",
+    "common.PathNavigationRegionMixin",
+    "common.PathfindingContextMixin",
+    "common.PointedDripstoneBlockMixin",
+    "common.WalkNodeEvaluatorInvoker"
+  ],
+  "client": [
+    "client.BlockEntityRenderDispatcherMixin",
+    "client.CameraMixin",
+    "client.LevelRendererMixin",
+    "client.ScreenEffectRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

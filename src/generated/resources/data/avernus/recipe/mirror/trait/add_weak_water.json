@@ -1,0 +1,7 @@
+{
+  "type": "avernus:mirror_trait",
+  "material": {
+    "item": "minecraft:heart_of_the_sea"
+  },
+  "trait": "avernus:weak_water"
+}

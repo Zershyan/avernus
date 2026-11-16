@@ -1,0 +1,8 @@
+{
+  "type": "avernus:mirror_trait",
+  "material": {
+    "item": "minecraft:nether_star"
+  },
+  "remove": true,
+  "trait": "avernus:eternity"
+}

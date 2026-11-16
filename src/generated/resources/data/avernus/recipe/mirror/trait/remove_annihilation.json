@@ -1,0 +1,8 @@
+{
+  "type": "avernus:mirror_trait",
+  "material": {
+    "item": "minecraft:gunpowder"
+  },
+  "remove": true,
+  "trait": "avernus:annihilation"
+}
