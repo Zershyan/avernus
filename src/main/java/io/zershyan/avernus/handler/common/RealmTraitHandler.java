@@ -1,22 +1,17 @@
 package io.zershyan.avernus.handler.common;
 
-import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.realm.RealmTraitEffects;
 import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-/** 类型效果事件：湮没、虚妄、幻化；往生经由 LivingEntityMixin 先于图腾触发。 */
-@EventBusSubscriber(modid = Avernus.MODID)
+/** 类型效果事件：湮没、虚妄、幻化；往生经由 MixinLivingEntity 先于图腾触发。 */
 public final class RealmTraitHandler {
-    private static final int SUPPRESS_INTERVAL = 5;
-
     private RealmTraitHandler() {
     }
 
@@ -44,9 +39,7 @@ public final class RealmTraitHandler {
     }
 
     @SubscribeEvent
-    public static void onEntityTick(EntityTickEvent.Post event) {
-        if (event.getEntity() instanceof Mob mob && !mob.level().isClientSide && mob.tickCount % SUPPRESS_INTERVAL == 0) {
-            RealmTraitEffects.suppressTargets(mob);
-        }
+    public static void onEntityTick(EntityTickEvent.Pre event) {
+        if (event.getEntity() instanceof Mob mob) RealmTraitEffects.suppressTargets(mob);
     }
 }

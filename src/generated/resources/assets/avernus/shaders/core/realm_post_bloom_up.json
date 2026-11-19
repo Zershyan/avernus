@@ -1,0 +1,10 @@
+{
+  "fragment": "avernus:realm_post_bloom_up",
+  "samplers": [
+    {
+      "name": "SourceSampler"
+    }
+  ],
+  "uniforms": [],
+  "vertex": "avernus:realm_post"
+}

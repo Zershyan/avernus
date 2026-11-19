@@ -1,6 +1,5 @@
 package io.zershyan.avernus.handler.client;
 
-import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.api.AvernusApi;
 import io.zershyan.avernus.datagen.lang.AvernusKeyLang;
 import io.zershyan.avernus.registry.AvernusKeyMappings;
@@ -9,15 +8,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /** 胸饰镜快捷键与镜子提示中的按键/锻造说明。 */
-@EventBusSubscriber(modid = Avernus.MODID, value = Dist.CLIENT)
 public final class MirrorClientHandler {
     private MirrorClientHandler() {
     }

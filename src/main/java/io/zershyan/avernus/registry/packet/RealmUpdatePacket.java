@@ -4,27 +4,32 @@ import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.realm.Realm;
 import io.zershyan.avernus.realm.RealmSets;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import org.jetbrains.annotations.NotNull;
 
-/** 服务端 → 客户端：新增或更新一个领域（含关闭时刻与永恒中心）。 */
-public record RealmUpdatePacket(Realm realm) implements CustomPacketPayload {
+/** 玩家开始观察一个领域时收到一次完整状态。 */
+public record RealmUpdatePacket(long epoch, long order, Realm.Snapshot snapshot) implements CustomPacketPayload {
     public static final Type<RealmUpdatePacket> TYPE = new Type<>(Avernus.id("realm_update"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, RealmUpdatePacket> STREAM_CODEC =
-            Realm.STREAM_CODEC.map(RealmUpdatePacket::new, RealmUpdatePacket::realm);
+    public static final StreamCodec<RegistryFriendlyByteBuf, RealmUpdatePacket> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.VAR_LONG, RealmUpdatePacket::epoch,
+            ByteBufCodecs.VAR_LONG, RealmUpdatePacket::order,
+            Realm.Snapshot.STREAM_CODEC, RealmUpdatePacket::snapshot,
+            RealmUpdatePacket::new);
 
     @Override
-    public @NotNull Type<? extends CustomPacketPayload> type() {
+    public Type<RealmUpdatePacket> type() {
         return TYPE;
     }
 
     public void handle(IPayloadContext context) {
-        context.enqueueWork(() -> {
-            Level level = context.player().level();
-            if (level.dimension().equals(realm.dimension())) RealmSets.of(level).put(realm);
-        });
+        Level level = context.player().level();
+        if (!level.dimension().equals(snapshot.dimension())) return;
+        var set = RealmSets.of(level);
+        if (!set.acceptUpdate(epoch, order)) return;
+        Realm realm = snapshot.instantiate();
+        if (realm != null) set.put(realm);
     }
 }

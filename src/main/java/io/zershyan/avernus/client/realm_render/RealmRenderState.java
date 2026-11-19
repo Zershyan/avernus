@@ -1,181 +1,228 @@
 package io.zershyan.avernus.client.realm_render;
 
-import io.zershyan.avernus.api.realm.RealmPhase;
-import io.zershyan.avernus.realm.Realm;
 import io.zershyan.avernus.realm.RealmSets;
+import io.zershyan.avernus.util.mixin.avernus.client.IMixinViewArea;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.ViewArea;
+import net.minecraft.client.renderer.chunk.RenderRegionCache;
+import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.RenderSection;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
-/**
- * 客户端领域渲染状态（仅主线程访问）：为每个领域分配网格标签、在网格键变化时重建受影响 section，
- * 并按帧打包领域区块 Shader 的覆盖参数。覆盖判定与 {@link Realm#covers} 逐格一致。
- */
+/** 保留原版区块缓冲，只对受影响列做裁剪和补绘。 */
 public final class RealmRenderState {
-    public static final int MAX_REALMS = 8;
-    private static final int STRIDE = 8;
-    private static final int MAX_LABEL = 253;
-    private static final ResourceLocation WATER_SPRITE = ResourceLocation.withDefaultNamespace("block/water_still");
-
-    private static final Map<UUID, RealmMeshKey> KEYS = new HashMap<>();
-    private static final float[] DATA = new float[MAX_REALMS * STRIDE];
-    private static List<Realm> visible = List.of();
-    private static long frameTime;
+    private static final RealmColumns COLUMNS = new RealmColumns();
+    private static final RealmSectionMeshes MESHES = new RealmSectionMeshes();
+    private static final ObjectArrayList<RenderSection> DRAW = new ObjectArrayList<>();
+    private static final List<RenderSection> SUPPLEMENT = new ArrayList<>();
+    private static @Nullable ClientLevel world;
+    private static Vec3 cameraPosition = Vec3.ZERO;
+    private static boolean warming;
+    private static long warmTick = Long.MIN_VALUE;
 
     private RealmRenderState() {
     }
 
-    /** 是否需要领域区块 Shader：只要存在虚拟网格就必须裁剪，即使当前观察者看不到任何领域。 */
     public static boolean active() {
-        return !KEYS.isEmpty();
-    }
-
-    public static boolean hasVisibleRealm() {
-        return !visible.isEmpty();
-    }
-
-    // region 网格键与重建
-
-    public static void tick() {
-        Minecraft mc = Minecraft.getInstance();
-        ClientLevel level = mc.level;
-        if (level == null) {
-            reset();
-            return;
-        }
-        long time = level.getGameTime();
-        Set<UUID> seen = new HashSet<>();
-        boolean changed = false;
-        for (Realm realm : RealmSets.of(level).all()) {
-            RealmMeshKey previous = KEYS.get(realm.id());
-            int label = previous != null ? previous.label() : freeLabel();
-            if (label < 0) continue;
-            seen.add(realm.id());
-            RealmMeshKey key = RealmMeshKey.of(realm, label, realm.phase(time) != RealmPhase.ACTIVE, previous);
-            if (key.equals(previous)) continue;
-            KEYS.put(realm.id(), key);
-            if (previous != null) markDirty(level, previous);
-            markDirty(level, key);
-            changed = true;
-        }
-        var iterator = KEYS.entrySet().iterator();
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            if (seen.contains(entry.getKey())) continue;
-            markDirty(level, entry.getValue());
-            iterator.remove();
-            changed = true;
-        }
-        if (changed) mc.levelRenderer.needsUpdate();
+        return COLUMNS.active();
     }
 
     public static void reset() {
-        KEYS.clear();
-        visible = List.of();
+        world = null;
+        warming = false;
+        warmTick = Long.MIN_VALUE;
+        COLUMNS.close();
+        MESHES.reset();
+        DRAW.clear();
+        SUPPLEMENT.clear();
     }
 
-    private static int freeLabel() {
-        boolean[] used = new boolean[MAX_LABEL + 1];
-        KEYS.values().forEach(key -> used[key.label()] = true);
-        for (int i = 0; i <= MAX_LABEL; i++) if (!used[i]) return i;
-        return -1;
-    }
-
-    private static void markDirty(ClientLevel level, RealmMeshKey key) {
-        int minSy = Math.max(SectionPos.blockToSectionCoord(key.layerY()), level.getMinSection());
-        int maxSy = level.getMaxSection() - 1;
-        double reach = key.radius() + key.margin() + 3.0;
-        int minSx = SectionPos.blockToSectionCoord(Mth.floor(key.centerX() - reach));
-        int maxSx = SectionPos.blockToSectionCoord(Mth.floor(key.centerX() + reach));
-        int minSz = SectionPos.blockToSectionCoord(Mth.floor(key.centerZ() - reach));
-        int maxSz = SectionPos.blockToSectionCoord(Mth.floor(key.centerZ() + reach));
-        var renderer = Minecraft.getInstance().levelRenderer;
-        for (int sx = minSx; sx <= maxSx; sx++) {
-            for (int sz = minSz; sz <= maxSz; sz++) {
-                for (int sy = minSy; sy <= maxSy; sy++) {
-                    if (key.affectsSection(sx, sy, sz)) renderer.setSectionDirty(sx, sy, sz);
-                }
-            }
-        }
-    }
-
-    /** 主线程捕获构建所需数据，编译线程只读快照。 */
-    public static void addGeometry(AddSectionGeometryEvent event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (KEYS.isEmpty() || event.getLevel() != mc.level) return;
-        BlockPos origin = event.getSectionOrigin();
-        int sx = SectionPos.blockToSectionCoord(origin.getX());
-        int sy = SectionPos.blockToSectionCoord(origin.getY());
-        int sz = SectionPos.blockToSectionCoord(origin.getZ());
-        TextureAtlas atlas = mc.getModelManager().getAtlas(InventoryMenu.BLOCK_ATLAS);
-        List<RealmSectionMesher.Job> jobs = new ArrayList<>();
-        for (RealmMeshKey key : KEYS.values()) {
-            if (!key.affectsSection(sx, sy, sz)) continue;
-            RealmVisualProfile profile = RealmVisuals.get(key.aspect());
-            jobs.add(new RealmSectionMesher.Job(key, atlas.getSprite(profile.solidTexture()), atlas.getSprite(WATER_SPRITE), profile.waterColor()));
-        }
-        if (!jobs.isEmpty()) event.addRenderer(context -> RealmSectionMesher.build(context, origin, jobs));
-    }
-
-    // endregion
-
-    // region 帧参数
-
-    /** 在相机就位后调用：筛选观察者可见的领域并写入 Shader 覆盖参数。 */
-    public static void prepareFrame(ShaderInstance shader) {
-        Minecraft mc = Minecraft.getInstance();
-        ClientLevel level = mc.level;
-        if (level == null) return;
-        Camera camera = mc.gameRenderer.getMainCamera();
-        Vec3 cam = camera.getPosition();
-        int bx = Mth.floor(cam.x), by = Mth.floor(cam.y), bz = Mth.floor(cam.z);
-        frameTime = level.getGameTime();
-        List<Realm> list = new ArrayList<>(MAX_REALMS);
-        for (Realm realm : RealmSets.of(level).all()) {
-            if (list.size() == MAX_REALMS) break;
-            RealmMeshKey key = KEYS.get(realm.id());
-            if (key == null || !realm.geometryAppliesTo(camera.getEntity())) continue;
-            int b = list.size() * STRIDE;
-            DATA[b] = (float) (realm.sourceX() - bx);
-            DATA[b + 1] = (float) (realm.sourceZ() - bz);
-            DATA[b + 2] = (float) realm.waveRadius(frameTime);
-            DATA[b + 3] = realm.height() - by;
-            DATA[b + 4] = (float) (realm.exactCenterX() - bx);
-            DATA[b + 5] = (float) (realm.exactCenterZ() - bz);
-            DATA[b + 6] = realm.radius();
-            DATA[b + 7] = key.label();
-            list.add(realm);
-        }
-        visible = list;
-        shader.safeGetUniform("RealmCount").set(list.size());
-        shader.safeGetUniform("RealmData").set(DATA);
-        shader.safeGetUniform("CameraFrac").set((float) (cam.x - bx), (float) (cam.y - by), (float) (cam.z - bz));
-    }
-
-    /** 该位置的真实方块是否被观察者所见的领域消隐（与 Shader 同一规则）。 */
     public static boolean hides(BlockPos pos) {
-        for (Realm realm : visible) {
-            if (realm.covers(pos.getX(), pos.getZ(), frameTime)) return pos.getY() >= realm.height() - 1;
+        return COLUMNS.hides(pos);
+    }
+
+    public static boolean inWeakWaterAbyss(BlockPos pos) {
+        return COLUMNS.abyss.contains(pos);
+    }
+
+    public static void renderWeakWaterAbyss(RenderLevelStageEvent event) {
+        COLUMNS.abyss.render(event);
+    }
+
+    public static void dirty(@Nullable ClientLevel level, int x, int y, int z) {
+        if (level == null || level != world) return;
+        COLUMNS.dirty(x, z);
+        MESHES.dirty(x, y, z);
+    }
+
+    public static void prepare(ClientLevel level, ViewArea view, Camera camera, Frustum frustum, List<RenderSection> vanilla) {
+        if (world != level) {
+            reset();
+            world = level;
+        }
+        var player = Minecraft.getInstance().player;
+        BlockPos center = player != null ? player.blockPosition() : camera.getBlockPosition();
+        cameraPosition = camera.getPosition();
+        boolean wasActive = active();
+        COLUMNS.update(level, camera.getEntity(), SectionPos.blockToSectionCoord(center.getX()),
+                SectionPos.blockToSectionCoord(center.getZ()), view.getViewDistance());
+        DRAW.clear();
+        SUPPLEMENT.clear();
+        long time = level.getGameTime();
+        var realms = RealmSets.of(level).all();
+        boolean wasWarming = warming;
+        warming = false;
+        if (!realms.isEmpty()) {
+            MESHES.beginFrame();
+            RenderRegionCache regions = null;
+            if (active()) {
+                regions = new RenderRegionCache();
+                prepareActive(level, view, frustum, vanilla, regions);
+            }
+            for (var realm : realms) {
+                if (!realm.geometryAppliesTo(camera.getEntity()) || realm.closeTime() >= 0 || time > realm.startTime() + realm.timeline().shatterDelay()) continue;
+                warming = true;
+                if (time == warmTick) break;
+                if (regions == null) regions = new RenderRegionCache();
+                RealmPrewarm.request(level, realm, view, frustum, center, cameraPosition, MESHES, regions);
+            }
+            if (warming) warmTick = time;
+        }
+        if (active() || warming) MESHES.prune();
+        else if (wasActive || wasWarming) MESHES.reset();
+    }
+
+    private static void prepareActive(ClientLevel level, ViewArea view, Frustum frustum, List<RenderSection> vanilla, RenderRegionCache regions) {
+        Set<RenderSection> existing = new HashSet<>(vanilla);
+        List<RenderSection> relevant = new ArrayList<>();
+        BlockPos.MutableBlockPos origin = new BlockPos.MutableBlockPos();
+        IMixinViewArea lookup = (IMixinViewArea) view;
+        COLUMNS.forEachCandidate(chunk -> {
+            int x = ChunkPos.getX(chunk), z = ChunkPos.getZ(chunk);
+            if (level.getChunk(x, z, ChunkStatus.FULL, false) == null) return;
+            int layer = COLUMNS.minimumLayer(chunk);
+            var range = COLUMNS.boundary(chunk);
+            int firstY = range == null ? layer : Math.min(layer, range.minY());
+            int lastY = layer != Integer.MAX_VALUE ? level.getMaxSection() - 1
+                    : range == null ? level.getMinSection() - 1 : SectionPos.blockToSectionCoord(range.maxY());
+            for (int sy = Math.max(level.getMinSection(), SectionPos.blockToSectionCoord(firstY)); sy <= lastY; sy++) {
+                origin.set(SectionPos.sectionToBlockCoord(x), SectionPos.sectionToBlockCoord(sy), SectionPos.sectionToBlockCoord(z));
+                RenderSection section = lookup.avernus$sectionAt(origin);
+                if (section == null || !origin.equals(section.getOrigin()) || !frustum.isVisible(section.getBoundingBox())) continue;
+                relevant.add(section);
+                if (existing.add(section)) SUPPLEMENT.add(section);
+            }
+        });
+        DRAW.addAll(vanilla);
+        DRAW.addAll(SUPPLEMENT);
+        if (!SUPPLEMENT.isEmpty()) DRAW.sort(Comparator.comparingDouble(RealmRenderState::distance));
+        relevant.sort(Comparator.comparingDouble(RealmRenderState::distance));
+        for (RenderSection section : relevant) requestSurface(level, regions, section);
+        for (RenderSection section : relevant) requestBoundary(level, regions, section);
+    }
+
+    private static double distance(RenderSection section) {
+        var origin = section.getOrigin();
+        return cameraPosition.distanceToSqr(origin.getX() + 8.0, origin.getY() + 8.0, origin.getZ() + 8.0);
+    }
+
+    private static long chunk(BlockPos origin) {
+        return ChunkPos.asLong(SectionPos.blockToSectionCoord(origin.getX()), SectionPos.blockToSectionCoord(origin.getZ()));
+    }
+
+    private static void requestSurface(ClientLevel level, RenderRegionCache regions, RenderSection section) {
+        BlockPos origin = section.getOrigin();
+        long key = SectionPos.asLong(origin);
+        for (var style : COLUMNS.styles(chunk(origin))) {
+            if (sameLayer(style.key(), origin)) MESHES.request(level, regions, key, style.key(), cameraPosition);
+        }
+    }
+
+    private static void requestBoundary(ClientLevel level, RenderRegionCache regions, RenderSection section) {
+        BlockPos origin = section.getOrigin();
+        var range = COLUMNS.boundary(chunk(origin));
+        if (range != null && range.intersects(origin.getY())) MESHES.request(level, regions, SectionPos.asLong(origin), null, cameraPosition);
+    }
+
+    private static boolean sameLayer(RealmMeshKey style, BlockPos origin) {
+        return SectionPos.blockToSectionCoord(style.layerY()) == SectionPos.blockToSectionCoord(origin.getY());
+    }
+
+    public static List<RenderSection> supplement() {
+        return SUPPLEMENT;
+    }
+
+    public static ObjectListIterator<RenderSection> iterator(RenderType layer) {
+        return DRAW.listIterator(layer == RenderType.translucent() ? DRAW.size() : 0);
+    }
+
+    public static void setupShader(ShaderInstance shader) {
+        int size = COLUMNS.size();
+        shader.setSampler("RealmColumns", COLUMNS.texture());
+        shader.safeGetUniform("RealmBounds").set(COLUMNS.minX(), COLUMNS.minZ(), COLUMNS.maxX(), COLUMNS.maxZ());
+        shader.safeGetUniform("RealmTableOrigin").set(Math.floorMod(COLUMNS.minX(), size), Math.floorMod(COLUMNS.minZ(), size));
+        shader.safeGetUniform("RealmTableSize").set(size);
+    }
+
+    public static boolean hasAdditional(RenderSection section, RenderType type) {
+        BlockPos origin = section.getOrigin();
+        long chunk = chunk(origin), pos = SectionPos.asLong(origin);
+        var range = COLUMNS.boundary(chunk);
+        if (range != null && range.intersects(origin.getY()) && MESHES.hasLayer(pos, null, type)) return true;
+        for (var style : COLUMNS.styles(chunk)) {
+            if (sameLayer(style.key(), origin) && MESHES.hasLayer(pos, style.key(), type)) return true;
         }
         return false;
     }
 
-    // endregion
+    public static void draw(RenderSection section, RenderType type, ShaderInstance shader, Runnable drawOriginal) {
+        BlockPos origin = section.getOrigin();
+        long chunk = chunk(origin), pos = SectionPos.asLong(origin);
+        var uniform = shader.getUniform("RealmSectionOrigin");
+        var mode = shader.getUniform("RealmMeshMode");
+        var label = shader.getUniform("RealmStyle");
+        if (uniform == null || mode == null || label == null) {
+            if (!section.getCompiled().isEmpty(type)) drawOriginal.run();
+            return;
+        }
+        uniform.set(origin.getX(), origin.getY(), origin.getZ());
+        uniform.upload();
+        if (!section.getCompiled().isEmpty(type)) {
+            mode.set(COLUMNS.minimumLayer(chunk) < origin.getY() + 16 || COLUMNS.abyss.hasTile(chunk) ? 0 : -1);
+            mode.upload();
+            drawOriginal.run();
+        }
+        var range = COLUMNS.boundary(chunk);
+        if (range != null && range.intersects(origin.getY()) && MESHES.hasLayer(pos, null, type)) {
+            mode.set(1);
+            mode.upload();
+            MESHES.draw(pos, null, type, origin, cameraPosition);
+        }
+        for (var style : COLUMNS.styles(chunk)) {
+            if (!sameLayer(style.key(), origin) || !MESHES.hasLayer(pos, style.key(), type)) continue;
+            mode.set(2);
+            mode.upload();
+            label.set(style.id());
+            label.upload();
+            MESHES.draw(pos, style.key(), type, origin, cameraPosition);
+        }
+    }
 }

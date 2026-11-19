@@ -3,6 +3,7 @@ package io.zershyan.avernus.datagen.provider;
 import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.datagen.lang.AvernusLang;
 import net.minecraft.data.PackOutput;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 
@@ -30,6 +31,7 @@ public class ModLangProvider extends LanguageProvider {
             String text = selector.apply(entry.lang());
             switch (entry.key()) {
                 case Item item -> add(item, text);
+                case EntityType<?> type -> add(type, text);
                 case String key -> add(key, text);
                 default -> throw new IllegalArgumentException("Unknown lang key type: " + entry.key().getClass());
             }

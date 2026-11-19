@@ -1,21 +1,12 @@
 package io.zershyan.avernus.client.realm_render;
 
-import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.realm.Realm;
 import io.zershyan.avernus.realm.RealmSets;
+import io.zershyan.avernus.registry.config.ClientConfig;
+import io.zershyan.avernus.registry.config.RealmFxQuality;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.EffectInstance;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -24,19 +15,18 @@ import net.neoforged.neoforge.client.event.ViewportEvent;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.lwjgl.system.MemoryStack;
 
-import java.io.IOException;
+import java.util.List;
 
-/**
- * 摄像机所处领域的环境后处理：世界绘制完成后、第一人称手部之前，把主目标颜色复制到自有目标，
- * 结合场景深度做境相色调、深度雾与波环亮线，再写回主目标颜色，不改动主场景深度。
- */
+import static org.lwjgl.opengl.GL11.GL_COLOR;
+import static org.lwjgl.opengl.GL30.glClearBufferfv;
+
+/** 领域环境：摄像机所在领域的氛围渐变、雾色，以及每帧组装后处理输入。 */
 public final class RealmEnvironment {
     private static final float FADE_PER_TICK = 0.05F;
+    private static final int TIME_PERIOD_TICKS = 120000;
 
-    private static @Nullable EffectInstance effect;
-    private static boolean failed;
-    private static @Nullable RenderTarget copy;
     private static @Nullable RealmVisualProfile profile;
     private static @Nullable Realm current;
     private static float strength;
@@ -63,11 +53,19 @@ public final class RealmEnvironment {
             profile = RealmVisuals.get(realm.aspect());
         }
         strength = Mth.approach(strength, realm != null ? 1.0F : 0.0F, FADE_PER_TICK);
-        if (strength <= 0.0F && strengthO <= 0.0F) current = null;
+        if (strength <= 0.0F && strengthO <= 0.0F && current != null) {
+            current = null;
+            profile = null;
+        }
     }
 
     private static float strength(float partialTick) {
         return Mth.lerp(partialTick, strengthO, strength);
+    }
+
+    /** 境内天空已整体替换为程序化天空，原版云层只会留下色差斑块（关档保持原样）。 */
+    public static boolean hidesClouds() {
+        return strength > 0.0F && ClientConfig.quality() != RealmFxQuality.OFF;
     }
 
     public static void modifyFogColor(ViewportEvent.ComputeFogColor event) {
@@ -84,96 +82,44 @@ public final class RealmEnvironment {
     // region 资源
 
     public static ResourceManagerReloadListener reloadListener() {
-        return manager -> close();
+        return manager -> RealmPostChain.close();
     }
 
     public static void close() {
-        if (effect != null) effect.close();
-        if (copy != null) copy.destroyBuffers();
-        effect = null;
-        copy = null;
-        failed = false;
+        RealmPostChain.close();
         current = null;
         profile = null;
         strength = strengthO = 0.0F;
     }
 
-    private static @Nullable EffectInstance effect() {
-        if (effect == null && !failed) {
-            try {
-                effect = new EffectInstance(Minecraft.getInstance().getResourceManager(), Avernus.id("realm_environment").toString());
-            } catch (IOException e) {
-                failed = true;
-                Avernus.LOGGER.error("领域环境 Shader 加载失败，环境后处理已停用", e);
-            }
-        }
-        return effect;
-    }
-
-    private static RenderTarget copyOf(RenderTarget main) {
-        if (copy == null) {
-            copy = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
-        } else if (copy.width != main.width || copy.height != main.height) {
-            copy.resize(main.width, main.height, Minecraft.ON_OSX);
-        }
-        return copy;
-    }
-
     // endregion
 
     public static void render(RenderLevelStageEvent event) {
-        Realm realm = current;
-        RealmVisualProfile visual = profile;
-        float s = strength(event.getPartialTick().getGameTimeDeltaPartialTick(false));
-        if (realm == null || visual == null || s <= 0.0F) return;
-        EffectInstance shader = effect();
-        if (shader == null) return;
+        if (RealmRenderState.inWeakWaterAbyss(event.getCamera().getBlockPosition())) {
+            try (var stack = MemoryStack.stackPush()) {
+                glClearBufferfv(GL_COLOR, 0, stack.floats(0F, 0F, 0F, 1F));
+            }
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
-        RenderTarget main = mc.getMainRenderTarget();
-        RenderTarget target = copyOf(main);
+        ClientLevel level = mc.level;
+        if (level == null) return;
+        RealmFxQuality quality = ClientConfig.quality();
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        Camera camera = event.getCamera();
+        Vec3 cam = camera.getPosition();
+        Realm realm = current;
+        float s = realm != null && profile != null ? strength(partialTick) : 0.0F;
+        if (quality == RealmFxQuality.OFF && s <= 0.0F) return;
 
-        GlStateManager._glBindFramebuffer(GL_READ_FRAMEBUFFER, main.frameBufferId);
-        GlStateManager._glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.frameBufferId);
-        GlStateManager._glBlitFrameBuffer(0, 0, main.width, main.height, 0, 0, target.width, target.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-        main.bindWrite(true);
-
-        Vec3 cam = event.getCamera().getPosition();
-        Matrix4f invViewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getModelViewMatrix()).invert();
-        float time = event.getRenderTick() + event.getPartialTick().getGameTimeDeltaPartialTick(false);
-        float w = main.width, h = main.height;
-
-        shader.setSampler("DiffuseSampler", target::getColorTextureId);
-        shader.setSampler("DepthSampler", main::getDepthTextureId);
-        shader.safeGetUniform("ProjMat").set(new Matrix4f().setOrtho(0.0F, w, 0.0F, h, 0.1F, 1000.0F));
-        shader.safeGetUniform("InSize").set(w, h);
-        shader.safeGetUniform("OutSize").set(w, h);
-        shader.safeGetUniform("InvViewProj").set(invViewProj);
-        shader.safeGetUniform("Tint").set(RealmVisualProfile.rgb(visual.tint()));
-        shader.safeGetUniform("FogTint").set(RealmVisualProfile.rgb(visual.fogColor()));
-        shader.safeGetUniform("Strength").set(s);
-        shader.safeGetUniform("FogDistance").set(visual.fogDistance());
-        shader.safeGetUniform("WaveSource").set((float) (realm.sourceX() - cam.x), (float) (realm.sourceZ() - cam.z));
-        shader.safeGetUniform("WaveRadius").set(mc.level == null ? -1.0F : (float) realm.waveRadius(mc.level.getGameTime()));
-        shader.safeGetUniform("Time").set(time);
-
-        RenderSystem.disableBlend();
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        shader.apply();
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        builder.addVertex(0.0F, 0.0F, 500.0F);
-        builder.addVertex(w, 0.0F, 500.0F);
-        builder.addVertex(w, h, 500.0F);
-        builder.addVertex(0.0F, h, 500.0F);
-        BufferUploader.draw(builder.buildOrThrow());
-        shader.clear();
-        RenderSystem.depthMask(true);
-        RenderSystem.enableDepthTest();
-        main.bindWrite(true);
+        List<RealmMoments.Moment> moments = RealmMoments.collect(level, camera.getEntity(), cam, partialTick);
+        RealmVisualProfile visual = profile != null ? profile : moments.isEmpty() ? RealmVisualProfile.FALLBACK : moments.getFirst().visual();
+        double wave = realm == null ? -1.0 : moments.stream().filter(moment -> moment.realm() == realm)
+                .mapToDouble(RealmMoments.Moment::wave).findFirst().orElseGet(() -> realm.waveRadius(level.getGameTime()));
+        Matrix4f viewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getModelViewMatrix());
+        float time = (event.getRenderTick() % TIME_PERIOD_TICKS + partialTick) / 20.0F;
+        var frame = new RealmPostFrame(quality, s, realm, visual, wave, viewProj, new Matrix4f(viewProj).invert(), cam, time,
+                moments, RealmImpact.shock(moments, cam), RealmImpact.flash(moments, cam, quality));
+        if (!frame.idle()) RealmPostChain.render(frame, mc.getMainRenderTarget());
     }
-
-    private static final int GL_READ_FRAMEBUFFER = 0x8CA8;
-    private static final int GL_DRAW_FRAMEBUFFER = 0x8CA9;
-    private static final int GL_COLOR_BUFFER_BIT = 0x4000;
-    private static final int GL_NEAREST = 0x2600;
 }

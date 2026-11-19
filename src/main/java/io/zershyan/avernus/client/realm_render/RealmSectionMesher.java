@@ -7,170 +7,156 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.SectionPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.textures.FluidSpriteCache;
 import net.neoforged.neoforge.client.model.lighting.QuadLighter;
 
-import java.util.List;
+/** 只烘焙与波纹无关的网格；实际可见面在绘制时由相邻列决定。 */
+final class RealmSectionMesher {
+    private static final Direction[] DIRECTIONS = Direction.values();
+    private static final float WATER_TOP = RealmTerrain.WATER_FLUID.getOwnHeight();
+    private static final int[][][] CORNERS = {
+            {{0, 0, 1}, {0, 0, 0}, {1, 0, 0}, {1, 0, 1}},
+            {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 1, 0}},
+            {{1, 1, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}},
+            {{0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}},
+            {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}, {0, 1, 1}},
+            {{1, 1, 1}, {1, 0, 1}, {1, 0, 0}, {1, 1, 0}}
+    };
 
-/**
- * 在区块网格编译线程上为 section 追加领域几何：H−1 层的境相立方体/虚拟水，以及圆柱边缘被原版邻面剔除省略的真实侧面。
- * 显示与否全部交给领域区块 Shader 按波面裁剪，因此网格不随波纹半径重建。
- */
-public final class RealmSectionMesher {
-    private static final float WATER_TOP = 14.0F / 16.0F;
-    /** 弱水底面略高于格界，使 Shader 将其归入虚拟层所在格。 */
-    private static final float FLOOR_LIFT = 0.02F;
-
-    /** 主线程捕获的构建任务。 */
-    public record Job(RealmMeshKey key, TextureAtlasSprite solid, TextureAtlasSprite water, int waterColor) {
-    }
+    record Material(TextureAtlasSprite solid, TextureAtlasSprite still, TextureAtlasSprite flow, int waterColor) { }
 
     private RealmSectionMesher() {
     }
 
-    public static void build(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos origin, List<Job> jobs) {
+    static void buildSurface(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos origin,
+                             RealmMeshKey style, Material material) {
         BlockAndTintGetter region = context.getRegion();
-        int originSection = SectionPos.blockToSectionCoord(origin.getY());
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        for (Job job : jobs) {
-            RealmMeshKey key = job.key();
-            boolean layerHere = SectionPos.blockToSectionCoord(key.layerY()) == originSection;
-            int boundaryFrom = Math.max(key.layerY(), origin.getY());
-            for (int dx = 0; dx < 16; dx++) {
-                for (int dz = 0; dz < 16; dz++) {
-                    int x = origin.getX() + dx;
-                    int z = origin.getZ() + dz;
-                    if (layerHere && key.inDisc(x, z)) layer(context, region, job, pos.set(x, key.layerY(), z), origin);
-                    if (!key.needsBoundary(x, z)) continue;
-                    for (int y = boundaryFrom; y < origin.getY() + 16; y++) boundary(context, region, pos.set(x, y, z), origin);
+        BlockPos.MutableBlockPos side = new BlockPos.MutableBlockPos();
+        int ry = style.layerY() - origin.getY();
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                pos.set(origin.getX() + x, style.layerY(), origin.getZ() + z);
+                RealmTerrain.Kind kind = style.kind(region.getBlockState(pos));
+                if (kind != RealmTerrain.Kind.SOLID && kind != RealmTerrain.Kind.WATER) continue;
+                boolean water = kind == RealmTerrain.Kind.WATER;
+                VertexConsumer buffer = context.getOrCreateChunkBuffer(water ? RenderType.translucent() : RenderType.solid());
+                for (Direction dir : DIRECTIONS) {
+                    if (dir == Direction.DOWN) continue;
+                    side.setWithOffset(pos, dir);
+                    boolean hiddenByReal = dir.getAxis().isHorizontal() && region.getBlockState(side).isSolidRender(region, side);
+                    face(buffer, region, dir, x, ry, z, water ? WATER_TOP : 1.0F,
+                            water ? (dir.getAxis().isHorizontal() ? material.flow : material.still) : material.solid, water ? material.waterColor : 0xFFFFFF,
+                            light(region, side), hiddenByReal ? 0 : 255);
+                }
+                if (water) {
+                    face(buffer, region, Direction.DOWN, x, ry + WATER_TOP, z, 0.0F, material.still,
+                            material.waterColor, light(region, pos), 255);
+                } else if (!region.getBlockState(side.setWithOffset(pos, Direction.DOWN)).isSolidRender(region, side)) {
+                    face(buffer, region, Direction.DOWN, x, ry, z, 0.0F, material.solid,
+                            0xFFFFFF, light(region, side), 255);
                 }
             }
         }
     }
 
-    private static RealmTerrain.Kind kind(RealmMeshKey key, BlockAndTintGetter region, BlockPos pos) {
-        return RealmTerrain.classify(key.height(), key.weakWater(), key.boundless(), region.getBlockState(pos), pos.getY());
-    }
-
-    // region 虚拟层
-
-    private static void layer(AddSectionGeometryEvent.SectionRenderingContext context, BlockAndTintGetter region,
-                              Job job, BlockPos pos, BlockPos origin) {
-        RealmMeshKey key = job.key();
-        RealmTerrain.Kind kind = kind(key, region, pos);
-        if (kind != RealmTerrain.Kind.SOLID && kind != RealmTerrain.Kind.WATER) return;
-        boolean water = kind == RealmTerrain.Kind.WATER;
-        VertexConsumer consumer = consumer(context, water);
-        PoseStack.Pose pose = context.getPoseStack().last();
-        float rx = pos.getX() - origin.getX(), ry = pos.getY() - origin.getY(), rz = pos.getZ() - origin.getZ();
-        float top = water ? WATER_TOP : 1.0F;
-        TextureAtlasSprite sprite = water ? job.water() : job.solid();
-        int color = water ? job.waterColor() : 0xFFFFFF;
-        if (water && kind(key, region, pos.below()) == RealmTerrain.Kind.SOLID && !region.getBlockState(pos).isAir()) {
-            face(consumer(context, false), pose, region, Direction.UP, rx, ry - 1.0F + FLOOR_LIFT, rz, 1.0F, job.solid(), 0xFFFFFF,
-                    layerLight(region, pos), key.label());
-        }
-        for (Direction dir : Direction.values()) {
-            if (dir == Direction.DOWN) continue;
-            BlockPos side = pos.relative(dir);
-            if (dir.getAxis().isHorizontal() && key.inDisc(side.getX(), side.getZ())) {
-                RealmTerrain.Kind neighbor = kind(key, region, side);
-                if (neighbor == RealmTerrain.Kind.SOLID || neighbor == kind) continue;
-            }
-            int light = layerLight(region, side);
-            face(consumer, pose, region, dir, rx, ry, rz, top, sprite, color, light, key.label());
-            if (water && dir == Direction.UP) face(consumer, pose, region, Direction.DOWN, rx, ry + top, rz, 0.0F, sprite, color, light, key.label());
-        }
-    }
-
-    /** 真实天光可能被已消隐的高处遮挡，虚拟层按露天处理，仅保留方块光。 */
-    private static int layerLight(BlockAndTintGetter region, BlockPos pos) {
+    private static int light(BlockAndTintGetter region, BlockPos pos) {
         return LightTexture.pack(LightTexture.block(LevelRenderer.getLightColor(region, pos)), 15);
     }
 
-    private static VertexConsumer consumer(AddSectionGeometryEvent.SectionRenderingContext context, boolean water) {
-        return context.getOrCreateChunkBuffer(water ? RenderType.translucent() : RenderType.solid());
-    }
-
-    /** 绘制单位立方体（顶高 top）在 dir 方向的面；DOWN 面位于 ry 平面。 */
-    private static void face(VertexConsumer consumer, PoseStack.Pose pose, BlockAndTintGetter region, Direction dir,
-                             float rx, float ry, float rz, float top, TextureAtlasSprite sprite, int color, int light, int marker) {
+    private static void face(VertexConsumer buffer, BlockAndTintGetter region, Direction dir,
+                             float x, float y, float z, float top, TextureAtlasSprite sprite,
+                             int color, int light, int alpha) {
         float shade = region.getShade(dir, true);
-        int r = (int) ((color >> 16 & 0xFF) * shade), g = (int) ((color >> 8 & 0xFF) * shade), b = (int) ((color & 0xFF) * shade);
-        float[][] corners = corners(dir, top);
-        for (float[] c : corners) {
+        int r = (int) ((color >> 16 & 255) * shade);
+        int g = (int) ((color >> 8 & 255) * shade);
+        int b = (int) ((color & 255) * shade);
+        for (int[] c : CORNERS[dir.ordinal()]) {
             float u = dir.getAxis() == Direction.Axis.X ? c[2] : c[0];
-            float v = dir.getAxis() == Direction.Axis.Y ? c[2] : 1.0F - c[1];
-            consumer.addVertex(pose, rx + c[0], ry + c[1], rz + c[2])
-                    .setColor(r, g, b, marker)
-                    .setUv(sprite.getU(u), sprite.getV(v))
-                    .setLight(light)
-                    .setNormal(pose, dir.getStepX(), dir.getStepY(), dir.getStepZ());
+            float v = dir.getAxis() == Direction.Axis.Y ? c[2] : 1.0F - c[1] * top;
+            buffer.addVertex(x + c[0], y + c[1] * top, z + c[2]).setColor(r, g, b, alpha)
+                    .setUv(sprite.getU(u), sprite.getV(v)).setLight(light).setNormal(dir.getStepX(), dir.getStepY(), dir.getStepZ());
         }
     }
 
-    /** 以面外侧观察逆时针排列的四角。 */
-    private static float[][] corners(Direction dir, float top) {
-        return switch (dir) {
-            case DOWN -> new float[][]{{0, 0, 1}, {0, 0, 0}, {1, 0, 0}, {1, 0, 1}};
-            case UP -> new float[][]{{0, top, 0}, {0, top, 1}, {1, top, 1}, {1, top, 0}};
-            case NORTH -> new float[][]{{1, top, 0}, {1, 0, 0}, {0, 0, 0}, {0, top, 0}};
-            case SOUTH -> new float[][]{{0, top, 1}, {0, 0, 1}, {1, 0, 1}, {1, top, 1}};
-            case WEST -> new float[][]{{0, top, 0}, {0, 0, 0}, {0, 0, 1}, {0, top, 1}};
-            case EAST -> new float[][]{{1, top, 1}, {1, 0, 1}, {1, 0, 0}, {1, top, 0}};
-        };
+    private static void fluidBoundary(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos pos, BlockPos origin,
+                                      BlockState state) {
+        var region = context.getRegion();
+        var fluid = state.getFluidState();
+        var side = new BlockPos.MutableBlockPos();
+        int hidden = 0;
+        for (Direction dir : DIRECTIONS) {
+            side.setWithOffset(pos, dir);
+            BlockState neighbor = region.getBlockState(side);
+            if (fluid.getType().isSame(neighbor.getFluidState().getType()) || neighbor.isSolidRender(region, side)) hidden |= 1 << dir.ordinal();
+        }
+        if (hidden == 0) return;
+        var sprites = FluidSpriteCache.getFluidSprites(region, pos, fluid);
+        int color = IClientFluidTypeExtensions.of(fluid).getTintColor(fluid, region, pos);
+        var layer = ItemBlockRenderTypes.getRenderLayer(fluid);
+        var buffer = context.getOrCreateChunkBuffer(layer);
+        float top = fluid.getHeight(region, pos);
+        for (Direction dir : DIRECTIONS) {
+            if ((hidden & (1 << dir.ordinal())) == 0) continue;
+            face(buffer, region, dir, pos.getX() - origin.getX(), pos.getY() - origin.getY(), pos.getZ() - origin.getZ(),
+                    top, sprites[dir.getAxis().isHorizontal() ? 1 : 0], color, LevelRenderer.getLightColor(region, pos), color >>> 24);
+        }
     }
 
-    // endregion
-
-    // region 边界补面
-
-    /** 补回该方块被水平邻块剔除的面；Shader 只在本格可见而邻格已消隐时显示。 */
-    private static void boundary(AddSectionGeometryEvent.SectionRenderingContext context, BlockAndTintGetter region,
-                                 BlockPos pos, BlockPos origin) {
-        BlockState state = region.getBlockState(pos);
-        if (state.getRenderShape() != RenderShape.MODEL) return;
-        BlockPos immutable = pos.immutable();
-        BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
-        BakedModel model = dispatcher.getBlockModel(state);
-        ModelData data = model.getModelData(region, immutable, state, region.getModelData(immutable));
-        long seed = state.getSeed(immutable);
-        RandomSource random = RandomSource.create(seed);
-        QuadLighter lighter = null;
-        PoseStack poseStack = context.getPoseStack();
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos side = immutable.relative(dir);
-            if (Block.shouldRenderFace(state, region, immutable, dir, side)) continue;
-            for (RenderType type : model.getRenderTypes(state, random, data)) {
-                random.setSeed(seed);
-                var quads = model.getQuads(state, dir, random, data, type);
-                if (quads.isEmpty()) continue;
-                if (lighter == null) {
-                    lighter = context.getQuadLighter(true);
-                    lighter.setup(region, immutable, state);
+    static void buildBoundary(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos origin) {
+        BlockAndTintGetter region = context.getRegion();
+        var dispatcher = Minecraft.getInstance().getBlockRenderer();
+        var random = RandomSource.create();
+        var side = new BlockPos.MutableBlockPos();
+        for (BlockPos pos : BlockPos.betweenClosed(origin, origin.offset(15, 15, 15))) {
+            BlockState state = region.getBlockState(pos);
+            if (!state.getFluidState().isEmpty() && RealmTerrain.isPureFluid(state)) fluidBoundary(context, pos, origin, state);
+            if (state.getRenderShape() != RenderShape.MODEL) continue;
+            int hidden = 0;
+            for (Direction dir : DIRECTIONS) {
+                if (!Block.shouldRenderFace(state, region, pos, dir, side.setWithOffset(pos, dir))) hidden |= 1 << dir.ordinal();
+            }
+            if (hidden == 0) continue;
+            BlockPos fixed = pos.immutable();
+            var model = dispatcher.getBlockModel(state);
+            var data = model.getModelData(region, fixed, state, region.getModelData(fixed));
+            long seed = state.getSeed(fixed);
+            random.setSeed(seed);
+            PoseStack pose = context.getPoseStack();
+            pose.pushPose();
+            pose.translate(fixed.getX() - origin.getX(), fixed.getY() - origin.getY(), fixed.getZ() - origin.getZ());
+            QuadLighter lighter = null;
+            try {
+                for (RenderType type : model.getRenderTypes(state, random, data)) {
+                    for (Direction dir : DIRECTIONS) {
+                        if ((hidden & (1 << dir.ordinal())) == 0) continue;
+                        random.setSeed(seed);
+                        var quads = model.getQuads(state, dir, random, data, type);
+                        if (quads.isEmpty()) continue;
+                        if (lighter == null) {
+                            lighter = context.getQuadLighter(true);
+                            lighter.setup(region, fixed, state);
+                        }
+                        VertexConsumer buffer = context.getOrCreateChunkBuffer(type);
+                        for (var quad : quads) lighter.process(buffer, pose.last(), quad, OverlayTexture.NO_OVERLAY);
+                    }
                 }
-                VertexConsumer consumer = new MarkerVertexConsumer(context.getOrCreateChunkBuffer(type), MarkerVertexConsumer.BOUNDARY);
-                poseStack.pushPose();
-                poseStack.translate(immutable.getX() - origin.getX(), immutable.getY() - origin.getY(), immutable.getZ() - origin.getZ());
-                for (var quad : quads) lighter.process(consumer, poseStack.last(), quad, OverlayTexture.NO_OVERLAY);
-                poseStack.popPose();
+            } finally {
+                if (lighter != null) lighter.reset();
+                pose.popPose();
             }
         }
-        if (lighter != null) lighter.reset();
     }
-
-    // endregion
 }

@@ -1,0 +1,10 @@
+{
+  "atmosphere": "ember",
+  "fog_color": "#3A1206",
+  "fog_distance": 40.0,
+  "glow_color": "#FFB347",
+  "mirror_texture": "avernus:textures/entity/mirror/infernal.png",
+  "solid_texture": "avernus:block/realm/infernal",
+  "tint": "#FF8A3A",
+  "water_color": "#C2501A"
+}

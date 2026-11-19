@@ -13,17 +13,17 @@ uniform vec4 FogColor;
 in float vertexDistance;
 in vec4 vertexColor;
 in vec2 texCoord0;
-in vec3 relPos;
+in vec3 terrainPos;
 in vec3 normal;
-in float marker;
+in vec4 lightColor;
 
 out vec4 fragColor;
 
 void main() {
-    if (realm_discard(relPos, normal, marker)) {
+    if (realm_discard(terrainPos, normal, vertexColor.a)) {
         discard;
     }
-    vec4 color = texture(Sampler0, texCoord0) * vertexColor * ColorModulator;
+    vec4 color = texture(Sampler0, texCoord0) * vec4(vertexColor.rgb, RealmMeshMode == 2 ? 1.0 : vertexColor.a) * lightColor * ColorModulator;
     if (color.a < 0.1) {
         discard;
     }

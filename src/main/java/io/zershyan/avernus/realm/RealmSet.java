@@ -14,6 +14,28 @@ import java.util.UUID;
  */
 public final class RealmSet {
     private volatile List<Realm> realms = List.of();
+    private long updateEpoch;
+    private long updateOrder;
+    private boolean receivingUpdates;
+
+    public void beginUpdates(long epoch) {
+        if (epoch <= updateEpoch) return;
+        updateEpoch = epoch;
+        updateOrder = 0L;
+        receivingUpdates = true;
+        clear();
+    }
+
+    public void endUpdates() {
+        receivingUpdates = false;
+        clear();
+    }
+
+    public boolean acceptUpdate(long epoch, long order) {
+        if (!receivingUpdates || epoch != updateEpoch || order <= updateOrder) return false;
+        updateOrder = order;
+        return true;
+    }
 
     public List<Realm> all() {
         return realms;

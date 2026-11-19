@@ -34,7 +34,7 @@ public class AvernusAttachments {
             .builder(() -> RealmPresence.NONE)
             .build());
 
-    /** 所有者持有尚未正常结束的领域；异常退出后再次加载时据此补记冷却。 */
+    /** 当前开启的领域尚未结算冷却；结算时即清除，不等待收束动画结束。 */
     public static final Supplier<AttachmentType<Boolean>> OWNS_OPEN_REALM = REGISTER.register("owns_open_realm", () -> AttachmentType
             .builder(() -> Boolean.FALSE)
             .serialize(com.mojang.serialization.Codec.BOOL, Boolean::booleanValue)

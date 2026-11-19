@@ -1,12 +1,12 @@
 package io.zershyan.avernus.realm;
 
-import io.zershyan.avernus.mixin.common.PathNavigationRegionAccessor;
+import io.zershyan.avernus.util.mixin.avernus.common.IMixinPathNavigationRegion;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.PathNavigationRegion;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -25,7 +25,7 @@ public final class RealmPhysics {
 
     public static @Nullable Level levelOf(BlockGetter getter) {
         if (getter instanceof Level level) return level;
-        if (getter instanceof PathNavigationRegion region) return ((PathNavigationRegionAccessor) region).avernus$level();
+        if (getter instanceof IMixinPathNavigationRegion region) return region.avernus$level();
         return null;
     }
 
@@ -58,6 +58,17 @@ public final class RealmPhysics {
         return RealmTerrain.physicsState(kind(realm, real, pos));
     }
 
+    /** 仅在虚拟层或紧邻其下的流体表面接管高度；负数表示沿用原实现。 */
+    public static float surfaceHeight(BlockGetter getter, @Nullable Entity subject, BlockPos pos, FluidState state) {
+        Realm realm = realmAt(levelOf(getter), subject, pos);
+        if (realm == null || state.isEmpty() || !(state.getType() instanceof FlowingFluid)) return -1.0F;
+        int layer = realm.height() - 1;
+        if (pos.getY() == layer) return state.getOwnHeight();
+        if (pos.getY() != layer - 1) return -1.0F;
+        BlockPos above = pos.above();
+        return kind(realm, getter.getBlockState(above), above) == RealmTerrain.Kind.WATER && state.getType().isSame(Fluids.WATER)
+                ? 1.0F : state.getOwnHeight();
+    }
     /** 流体接触、浮力、眼部与相机使用的流体。 */
     public static FluidState fluid(@Nullable Level level, @Nullable Entity subject, BlockPos pos, FluidState real) {
         Realm realm = realmAt(level, subject, pos);

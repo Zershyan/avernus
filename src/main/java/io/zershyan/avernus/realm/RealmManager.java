@@ -1,32 +1,31 @@
 package io.zershyan.avernus.realm;
 
 import io.zershyan.avernus.api.event.RealmEvent;
-import io.zershyan.avernus.api.realm.RealmPhase;
 import io.zershyan.avernus.datagen.lang.AvernusKeyLang;
 import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
 import io.zershyan.avernus.registry.config.ServerConfig;
 import io.zershyan.avernus.registry.data_component.MirrorForm;
-import io.zershyan.avernus.registry.packet.RealmRemovePacket;
-import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
-import io.zershyan.avernus.registry.packet.RealmUpdatePacket;
+import io.zershyan.avernus.registry.entity.MirrorEntity;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -35,8 +34,9 @@ public final class RealmManager {
     /** 同维度单 tick 位移超过该距离视为传送，镜子直接贴到新位置。 */
     private static final double TELEPORT_DISTANCE_SQR = 16.0 * 16.0;
     private static final AtomicLong SEQUENCE = new AtomicLong();
-    /** 覆盖变化期间生物重算路径的间隔。 */
-    private static final int PATH_REFRESH_INTERVAL = 10;
+    /** 永恒镜子中心高出头顶的距离。 */
+    public static final double HEAD_CLEARANCE = 1.0;
+    private static final Map<UUID, MirrorEntity> MIRRORS = new HashMap<>();
 
     private RealmManager() {
     }
@@ -70,10 +70,12 @@ public final class RealmManager {
         }
         Realm realm = create(level, owner, form, resolved.get());
         RealmSets.of(level).put(realm);
+        MIRRORS.put(realm.id(), MirrorEntity.spawn(level, realm));
+        owner.removeData(AvernusAttachments.REALM_COOLDOWN);
         owner.setData(AvernusAttachments.OWNS_OPEN_REALM, true);
         realm.aspect().onRealmOpened(realm);
         realm.traits().forEach(trait -> trait.onRealmOpened(realm));
-        PacketDistributor.sendToPlayersInDimension(level, new RealmUpdatePacket(realm));
+        RealmSync.tick(level, RealmSets.of(level));
         NeoForge.EVENT_BUS.post(new RealmEvent.Opened(level, realm));
         return Result.OPENED;
     }
@@ -91,21 +93,26 @@ public final class RealmManager {
             offsetX = shatter.x - owner.getX();
             offsetZ = shatter.z - owner.getZ();
         }
-        return new Realm(UUID.randomUUID(), owner.getUUID(), level.dimension(), form, resolved,
-                Mth.floor(owner.getY()), ServerConfig.REALM_RADIUS.get(), SEQUENCE.incrementAndGet(),
-                level.getGameTime(), level.getRandom().nextLong(), timeline, chest, yaw, pitch,
-                owner.getX(), owner.getZ(), offsetX, offsetZ);
+        Realm.Motion motion = new Realm.Motion(0L, -1L, owner.getX(), owner.getZ(), chest, headY(owner), 0);
+        return new Realm(new Realm.Snapshot(UUID.randomUUID(), owner.getUUID(), owner.getId(), level.dimension(), form,
+                Mth.floor(owner.getY()), ServerConfig.REALM_RADIUS.get(), SEQUENCE.incrementAndGet(), level.getGameTime(),
+                level.getRandom().nextLong(), timeline, chest, yaw, pitch, offsetX, offsetZ, motion), resolved);
     }
 
     public static Vec3 chestOf(Entity entity) {
         return entity.position().add(0.0, entity.getBbHeight() * 0.7, 0.0);
     }
 
+    private static double headY(Entity entity) {
+        return entity.getY() + entity.getBbHeight() + HEAD_CLEARANCE;
+    }
+
     /** 主动关闭：进入收束演出并立刻结算冷却；重复请求无效果。 */
     public static boolean requestClose(ServerLevel level, Realm realm) {
         if (!realm.requestClose(level.getGameTime())) return false;
         startCooldown(level, realm);
-        PacketDistributor.sendToPlayersInDimension(level, new RealmUpdatePacket(realm));
+        if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) realm.moveAnchor(chestOf(owner), headY(owner), false);
+        RealmSync.tick(level, RealmSets.of(level));
         NeoForge.EVENT_BUS.post(new RealmEvent.Closing(level, realm));
         return true;
     }
@@ -117,17 +124,21 @@ public final class RealmManager {
     }
 
     private static void startCooldown(ServerLevel level, Realm realm) {
-        if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) RealmCooldowns.start(owner);
-        else PendingCooldowns.add(realm.ownerId());
+        if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) {
+            RealmCooldowns.start(owner);
+            owner.removeData(AvernusAttachments.OWNS_OPEN_REALM);
+        } else PendingCooldowns.add(realm.ownerId());
     }
 
     private static void finish(ServerLevel level, Realm realm, boolean emergency) {
         if (RealmSets.of(level).remove(realm.id()) == null) return;
+        MirrorEntity mirror = MIRRORS.remove(realm.id());
+        if (mirror != null) mirror.discard();
         if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) owner.removeData(AvernusAttachments.OWNS_OPEN_REALM);
-        refreshPaths(level, realm);
+        RealmNavigation.remove(level, realm);
         realm.aspect().onRealmClosed(realm);
         realm.traits().forEach(trait -> trait.onRealmClosed(realm));
-        PacketDistributor.sendToPlayersInDimension(level, new RealmRemovePacket(realm.id(), emergency));
+        RealmSync.remove(level, realm);
         NeoForge.EVENT_BUS.post(new RealmEvent.Removed(level, realm, emergency));
     }
 
@@ -137,7 +148,6 @@ public final class RealmManager {
 
     public static void tick(ServerLevel level) {
         RealmSet set = RealmSets.of(level);
-        if (set.isEmpty()) return;
         long time = level.getGameTime();
         for (Realm realm : set.all()) {
             Entity owner = level.getEntity(realm.ownerId());
@@ -149,35 +159,42 @@ public final class RealmManager {
                 finish(level, realm, false);
                 continue;
             }
-            if (realm.eternal() && followOwner(realm, owner)) {
-                PacketDistributor.sendToPlayersInDimension(level, new RealmUpdatePacket(realm));
+            boolean snap = false;
+            if (realm.eternal() || realm.isClosing(time)) {
+                Vec3 chest = chestOf(owner);
+                snap = realm.eternal() && chest.distanceToSqr(realm.motion().chest()) > TELEPORT_DISTANCE_SQR;
+                realm.moveAnchor(chest, headY(owner), snap);
             }
-            RealmPhase phase = realm.phase(time);
-            if ((phase == RealmPhase.EXPANDING || phase == RealmPhase.CLOSING) && time % PATH_REFRESH_INTERVAL == 0) {
-                refreshPaths(level, realm);
+            if (realm.shouldPlayShatter(time)) {
+                Vec3 at = realm.shatterPoint();
+                level.playSound(null, at.x, at.y, at.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.0F, 0.6F);
             }
+            ensureMirror(level, realm);
+            RealmNavigation.update(level, realm, time, snap);
             realm.aspect().tickRealm(realm);
             for (RealmTrait trait : realm.traits()) trait.tickRealm(realm);
         }
+        RealmSync.tick(level, set);
     }
 
-    /** 覆盖范围变化后，让范围内仍在寻路的生物按新的有效地形重算路径。 */
-    private static void refreshPaths(ServerLevel level, Realm realm) {
-        double r = realm.radius() + 1.0;
-        AABB box = new AABB(realm.exactCenterX() - r, level.getMinBuildHeight(), realm.exactCenterZ() - r,
-                realm.exactCenterX() + r, level.getMaxBuildHeight(), realm.exactCenterZ() + r);
-        for (Mob mob : level.getEntitiesOfClass(Mob.class, box)) {
-            if (!mob.getNavigation().isDone()) mob.getNavigation().recomputePath();
-        }
+    /** 镜子实体不存档，所在区块卸载后在重新加载时补生成。 */
+    private static void ensureMirror(ServerLevel level, Realm realm) {
+        MirrorEntity mirror = MIRRORS.get(realm.id());
+        if (mirror != null && !mirror.isRemoved()) return;
+        if (level.isLoaded(BlockPos.containing(realm.shatterPoint()))) MIRRORS.put(realm.id(), MirrorEntity.spawn(level, realm));
     }
 
-    private static boolean followOwner(Realm realm, Entity owner) {
-        double dx = owner.getX() - realm.exactCenterX();
-        double dz = owner.getZ() - realm.exactCenterZ();
-        if (dx == 0.0 && dz == 0.0) return false;
-        if (dx * dx + dz * dz > TELEPORT_DISTANCE_SQR) realm.markTeleported();
-        realm.moveCenter(owner.getX(), owner.getZ());
-        return true;
+    public static void ownerTeleported(Entity entity) {
+        if (!(entity instanceof LivingEntity) || !(entity.level() instanceof ServerLevel level)) return;
+        Realm realm = RealmSets.of(level).ownedBy(entity.getUUID());
+        if (realm == null || !realm.eternal()) return;
+        Realm.Motion previous = realm.motion();
+        Vec3 chest = chestOf(entity);
+        double head = headY(entity);
+        if (previous.chest().equals(chest) && previous.headY() == head) return;
+        realm.moveAnchor(chest, head, true);
+        RealmNavigation.update(level, realm, level.getGameTime(), true);
+        RealmSync.tick(level, RealmSets.of(level));
     }
 
     // endregion
@@ -201,12 +218,14 @@ public final class RealmManager {
     }
 
     public static void sendSnapshot(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, new RealmSnapshotPacket(player.level().dimension(),
-                new ArrayList<>(RealmSets.of(player.serverLevel()).all())));
+        RealmSync.reset(player);
     }
 
     public static void shutdown() {
         RealmSets.clearServer();
+        MIRRORS.clear();
+        RealmSync.clear();
+        RealmNavigation.clear();
         PendingCooldowns.clear();
     }
 
@@ -218,20 +237,24 @@ public final class RealmManager {
 
     /** 所有者已不在本维度时的冷却补记，待其再次出现时写入附件。 */
     public static final class PendingCooldowns {
-        private static final List<UUID> PENDING = new ArrayList<>();
+        private static final Set<UUID> PENDING = new HashSet<>();
 
         private PendingCooldowns() {
         }
 
         static synchronized void add(UUID owner) {
-            if (!PENDING.contains(owner)) PENDING.add(owner);
+            PENDING.add(owner);
         }
 
         /** 实体进入世界时：补记离场期间的冷却；若带着上次异常退出遗留的领域标记，也视为一次关闭。 */
         public static synchronized void apply(LivingEntity entity) {
-            boolean stale = entity.getData(AvernusAttachments.OWNS_OPEN_REALM) && find(entity.getServer(), entity.getUUID()) == null;
-            if (PENDING.remove(entity.getUUID()) || stale) RealmCooldowns.start(entity);
-            if (stale) entity.removeData(AvernusAttachments.OWNS_OPEN_REALM);
+            if (!(entity.level() instanceof ServerLevel level)) return;
+            boolean pending = PENDING.remove(entity.getUUID());
+            boolean stale = entity.hasData(AvernusAttachments.OWNS_OPEN_REALM) && entity.getData(AvernusAttachments.OWNS_OPEN_REALM)
+                    && find(level.getServer(), entity.getUUID()) == null;
+            if (!pending && !stale) return;
+            if (RealmCooldowns.remaining(entity) == 0L) RealmCooldowns.start(entity);
+            entity.removeData(AvernusAttachments.OWNS_OPEN_REALM);
         }
 
         static synchronized void clear() {

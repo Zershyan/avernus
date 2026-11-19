@@ -21,6 +21,11 @@ public final class RealmProtection {
         return isProtected(RealmPhysics.levelOf(getter), pos);
     }
 
+    /** 同类方块的属性更新不是破坏，空气与纯流体也允许替换。 */
+    public static boolean blocksMutation(Level level, BlockPos pos, BlockState before, BlockState after) {
+        return before.getBlock() != after.getBlock() && protectsReplacement(level, pos, before);
+    }
+
     /** 放置会替换掉的原方块是否受保护：空气与纯流体不算原方块。 */
     public static boolean protectsReplacement(Level level, BlockPos pos, BlockState replaced) {
         return !replaced.isAir() && !RealmTerrain.isPureFluid(replaced) && isProtected(level, pos);

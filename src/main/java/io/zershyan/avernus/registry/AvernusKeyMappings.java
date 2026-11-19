@@ -1,7 +1,7 @@
 package io.zershyan.avernus.registry;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import io.zershyan.avernus.compat.curios.CuriosCompat;
+import io.zershyan.avernus.compat.AvernusCompatFactory;
 import io.zershyan.avernus.datagen.lang.AvernusKeyLang;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.bus.api.IEventBus;
@@ -25,6 +25,6 @@ public final class AvernusKeyMappings {
     }
 
     public static void doRegister(IEventBus modBus) {
-        if (CuriosCompat.loaded()) modBus.addListener(AvernusKeyMappings::register);
+        AvernusCompatFactory.CURIOS.testLoadedAndRun(() -> modBus.addListener(AvernusKeyMappings::register));
     }
 }

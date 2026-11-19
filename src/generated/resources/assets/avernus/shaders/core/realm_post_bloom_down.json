@@ -1,0 +1,27 @@
+{
+  "fragment": "avernus:realm_post_bloom_down",
+  "samplers": [
+    {
+      "name": "SourceSampler"
+    }
+  ],
+  "uniforms": [
+    {
+      "type": "int",
+      "count": 1,
+      "name": "Prefilter",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 1,
+      "name": "Strength",
+      "values": [
+        0
+      ]
+    }
+  ],
+  "vertex": "avernus:realm_post"
+}

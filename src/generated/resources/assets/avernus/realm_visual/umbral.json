@@ -1,0 +1,9 @@
+{
+  "fog_color": "#0E2A20",
+  "fog_distance": 48.0,
+  "glow_color": "#7DFFC4",
+  "mirror_texture": "avernus:textures/entity/mirror/umbral.png",
+  "solid_texture": "avernus:block/realm/umbral",
+  "tint": "#5CE0A0",
+  "water_color": "#2E8A5E"
+}

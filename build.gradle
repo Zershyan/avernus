@@ -58,6 +58,16 @@ neoForge {
 
     // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
 
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        "${mod_id}_gametest" {
+            sourceSet(sourceSets.main)
+            sourceSet(sourceSets.gametest)
+        }
+    }
+
     runs {
         client1 {
             client()
@@ -91,16 +101,11 @@ neoForge {
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
-        configureEach {
-            systemProperty 'forge.logging.markers', 'REGISTRIES'
-            logLevel = org.slf4j.event.Level.DEBUG
-        }
-    }
-
-    mods {
-        "${mod_id}" {
-            sourceSet(sourceSets.main)
-            sourceSet(sourceSets.gametest)
+        configureEach { run ->
+            def mod = run.name == 'gameTestServer' ? "${mod_id}_gametest" : mod_id
+            run.loadedMods.set([neoForge.mods.getByName(mod)])
+            run.systemProperty 'forge.logging.markers', 'REGISTRIES'
+            run.logLevel = org.slf4j.event.Level.DEBUG
         }
     }
 }
@@ -119,6 +124,10 @@ dependencies {
     if (curios_dev_runtime.toBoolean()) {
         localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
     }
+}
+
+tasks.named('check') {
+    dependsOn 'runGameTestServer'
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

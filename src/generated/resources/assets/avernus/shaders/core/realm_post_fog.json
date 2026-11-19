@@ -1,0 +1,248 @@
+{
+  "fragment": "avernus:realm_post_fog",
+  "samplers": [
+    {
+      "name": "DepthSampler"
+    },
+    {
+      "name": "NoiseSampler"
+    }
+  ],
+  "uniforms": [
+    {
+      "type": "matrix4x4",
+      "count": 16,
+      "name": "InvViewProj",
+      "values": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "type": "float",
+      "count": 3,
+      "name": "CameraPos",
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "int",
+      "count": 1,
+      "name": "Downscale",
+      "values": [
+        2
+      ]
+    },
+    {
+      "type": "int",
+      "count": 1,
+      "name": "FogSteps",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 1,
+      "name": "Time",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "int",
+      "count": 1,
+      "name": "Quality",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 1,
+      "name": "Strength",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "int",
+      "count": 1,
+      "name": "Atmosphere",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 3,
+      "name": "Tint",
+      "values": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "type": "float",
+      "count": 3,
+      "name": "Glow",
+      "values": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "type": "float",
+      "count": 3,
+      "name": "FogTint",
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 1,
+      "name": "FogDistance",
+      "values": [
+        64
+      ]
+    },
+    {
+      "type": "float",
+      "count": 1,
+      "name": "FogDensity",
+      "values": [
+        1
+      ]
+    },
+    {
+      "type": "float",
+      "count": 1,
+      "name": "SurfaceY",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 4,
+      "name": "Bounds",
+      "values": [
+        0,
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "type": "matrix4x4",
+      "count": 16,
+      "name": "RealmShape",
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "matrix4x4",
+      "count": 16,
+      "name": "RealmSource",
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "matrix4x4",
+      "count": 16,
+      "name": "RealmLook",
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "int",
+      "count": 1,
+      "name": "RealmCount",
+      "values": [
+        0
+      ]
+    },
+    {
+      "type": "float",
+      "count": 4,
+      "name": "Shock",
+      "values": [
+        0,
+        0,
+        0,
+        -1
+      ]
+    }
+  ],
+  "vertex": "avernus:realm_post"
+}

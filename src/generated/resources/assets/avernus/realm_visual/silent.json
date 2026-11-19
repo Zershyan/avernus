@@ -1,0 +1,10 @@
+{
+  "atmosphere": "frost",
+  "fog_color": "#0C1630",
+  "fog_distance": 56.0,
+  "glow_color": "#CFEAFF",
+  "mirror_texture": "avernus:textures/entity/mirror/silent.png",
+  "solid_texture": "avernus:block/realm/silent",
+  "tint": "#78AAFF",
+  "water_color": "#2A5AA8"
+}

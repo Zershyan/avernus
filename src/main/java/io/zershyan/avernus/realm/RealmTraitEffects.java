@@ -14,6 +14,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.sounds.SoundEvents;
@@ -64,8 +65,8 @@ public final class RealmTraitEffects {
     /** 致命伤时先于不死图腾：所有者拥有往生领域即消费该领域救回一次，并紧急关闭领域。 */
     public static boolean tryRebirth(LivingEntity entity, DamageSource source) {
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || !(entity.level() instanceof ServerLevel level)) return false;
-        Realm realm = RealmSets.of(level).ownedBy(entity.getUUID());
-        if (realm == null || !realm.hasTrait(AvernusRealmTraits.REBIRTH.get())) return false;
+        Realm realm = effectWith(entity, AvernusRealmTraits.REBIRTH.get());
+        if (realm == null || !realm.ownerId().equals(entity.getUUID())) return false;
         RealmManager.emergencyClose(level, realm);
         entity.setHealth(1.0F);
         entity.removeEffectsCuredBy(EffectCures.PROTECTED_BY_TOTEM);
@@ -115,7 +116,11 @@ public final class RealmTraitEffects {
 
     /** 清除生物对受保护玩家的既有目标、中立愤怒与 Brain 攻击记忆。 */
     public static void suppressTargets(Mob mob) {
-        if (forbidsTarget(mob, mob.getTarget())) mob.setTarget(null);
+        if (!(mob instanceof Enemy) || !(mob.level() instanceof ServerLevel level) || RealmSets.of(level).isEmpty()) return;
+        if (forbidsTarget(mob, mob.getTarget())) {
+            mob.setTarget(null);
+            if (mob instanceof Creeper creeper && !creeper.isIgnited()) creeper.setSwellDir(-1);
+        }
         if (mob instanceof NeutralMob neutral && neutral.getPersistentAngerTarget() != null
                 && forbidsTarget(mob, mob.level().getPlayerByUUID(neutral.getPersistentAngerTarget()))) {
             neutral.stopBeingAngry();

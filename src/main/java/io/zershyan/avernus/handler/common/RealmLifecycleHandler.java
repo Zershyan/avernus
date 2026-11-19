@@ -1,15 +1,15 @@
 package io.zershyan.avernus.handler.common;
 
-import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.realm.RealmCooldowns;
 import io.zershyan.avernus.realm.RealmManager;
+import io.zershyan.avernus.realm.RealmSets;
+import io.zershyan.avernus.realm.RealmSync;
 import io.zershyan.avernus.registry.packet.ToggleWornMirrorPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -18,7 +18,6 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 /** 领域的服务端生命周期：维持、所有者死亡/下线/跨维度时紧急关闭、登录与切维度时同步。 */
-@EventBusSubscriber(modid = Avernus.MODID)
 public final class RealmLifecycleHandler {
     private RealmLifecycleHandler() {
     }
@@ -47,6 +46,7 @@ public final class RealmLifecycleHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             RealmManager.emergencyCloseOwned(player.server, player.getUUID());
             ToggleWornMirrorPacket.forget(player.getUUID());
+            RealmSync.forget(player.getUUID());
         }
     }
 
@@ -80,6 +80,9 @@ public final class RealmLifecycleHandler {
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
+        for (ServerLevel level : event.getServer().getAllLevels()) {
+            for (var realm : RealmSets.of(level).all()) RealmManager.emergencyClose(level, realm);
+        }
         RealmManager.shutdown();
     }
 }

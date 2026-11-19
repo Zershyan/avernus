@@ -1,5 +1,6 @@
 package io.zershyan.avernus.datagen.lang;
 
+import io.zershyan.avernus.registry.AvernusEntities;
 import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
@@ -20,6 +21,7 @@ public class AvernusRegistryLang extends AvernusLang {
     @Override
     protected void init() {
         addFinalEntry(AvernusItems.MIRROR.get(), "Mirror of Avernus", "阿维尔诺之镜");
+        addFinalEntry(AvernusEntities.MIRROR.get(), "Mirror of Avernus", "阿维尔诺之镜");
 
         aspect(AvernusRealmAspects.UMBRAL, "Umbral", "幽冥");
         aspect(AvernusRealmAspects.SILENT, "Silent", "寂静");
