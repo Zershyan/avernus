@@ -132,6 +132,28 @@ public final class RealmGameTests {
                 .thenSucceed();
     }
 
+    @GameTest(template = TEMPLATE, batch = "avernus_path_flat", timeoutTicks = TIMEOUT)
+    public static void walkOverFlattenedStepsWithoutJumping(GameTestHelper helper) {
+        floor(helper);
+        for (int z = 7; z <= 13; z += 3) fill(helper, Blocks.STONE, 3, H, z, 9, H, z);
+        Pig pig = helper.spawnWithNoFreeWill(EntityType.PIG, new Vec3(6.5, H, 4.5));
+        Realm realm = open(helper);
+        BlockPos goal = helper.absolutePos(new BlockPos(6, H, 15));
+        double ground = helper.absoluteVec(new Vec3(0, H, 0)).y;
+        double[] highest = {Double.NEGATIVE_INFINITY};
+        helper.onEachTick(() -> highest[0] = Math.max(highest[0], pig.getY()));
+        helper.startSequence()
+                .thenWaitUntil(() -> assertCovered(helper, realm, 0, 0, SIZE_X - 1, SIZE_Z - 1))
+                .thenExecute(() -> {
+                    highest[0] = pig.getY();
+                    helper.assertTrue(pig.getNavigation().moveTo(goal.getX() + 0.5, goal.getY(), goal.getZ() + 0.5, 1.0), "应能规划出平地路径");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(pig.getNavigation().isDone() && pig.getZ() > goal.getZ() - 1.5, "猪应走到目标"))
+                .thenExecute(() -> helper.assertTrue(highest[0] <= ground + 0.1, "穿过被抹平的台阶时不得起跳，最高 y=" + highest[0]))
+                .thenExecute(() -> close(helper, realm))
+                .thenSucceed();
+    }
+
     @GameTest(template = TEMPLATE, batch = "avernus_protect", timeoutTicks = TIMEOUT)
     public static void protectAgainstExplosionAndFalling(GameTestHelper helper) {
         floor(helper);

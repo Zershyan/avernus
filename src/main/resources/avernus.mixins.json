@@ -22,6 +22,8 @@
     "avernus.common.MixinLevel",
     "avernus.common.MixinLevelChunk",
     "avernus.common.MixinLivingEntity",
+    "avernus.common.MixinMoveControl",
+    "avernus.common.MixinPathNavigation",
     "avernus.common.MixinPathNavigationRegion",
     "avernus.common.MixinPathfindingContext",
     "avernus.common.MixinPiglinAi",

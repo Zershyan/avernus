@@ -1,7 +1,7 @@
 // 三境相程序化天空，依赖 realm_noise.glsl；颜色全部来自外观数据。
 
-// 稀疏星点：方向按网格取格，格内随机一点为星。
-float realm_stars(vec3 dir, float density, float size, float time, float twinkle) {
+// 稀疏星点：方向按网格取格，格内随机一点为星；pixel 为单个像素对应的方向变化量，须在统一控制流中由调用方求得。
+float realm_stars(vec3 dir, float density, float size, float time, float twinkle, float pixel) {
     vec3 p = dir * density;
     vec3 cell = floor(p);
     float h = realm_hash(cell);
@@ -9,7 +9,10 @@ float realm_stars(vec3 dir, float density, float size, float time, float twinkle
     vec3 star = cell + 0.5 + (vec3(realm_hash(cell + 7.1), realm_hash(cell + 3.7), realm_hash(cell + 1.3)) - 0.5) * 0.6;
     float d = length(p - star);
     float flicker = mix(1.0, 0.5 + 0.5 * sin(time * (2.0 + h * 5.0) + h * 40.0), twinkle);
-    return smoothstep(size, 0.0, d) * (h - 0.82) * 5.5 * flicker;
+    // 星点半径不小于一个像素，按面积比例降亮度，避免亚像素星点逐帧闪烁
+    float radius = max(size, pixel * density * 1.5);
+    float energy = size * size / (radius * radius);
+    return smoothstep(radius, 0.0, d) * energy * (h - 0.82) * 5.5 * flicker;
 }
 
 // 极光帷幕：沿水平投影的扭曲光带，竖向条纹缓慢流动。
@@ -23,7 +26,7 @@ float realm_aurora(sampler2D noise, vec3 dir, float height, float time, int octa
     return band * streak * smoothstep(0.0, 0.18, dir.y) * smoothstep(0.95, 0.55, dir.y);
 }
 
-vec3 realm_sky(sampler2D noise, vec3 dir, int atmosphere, vec3 tint, vec3 glow, vec3 fog, float time, int octaves) {
+vec3 realm_sky(sampler2D noise, vec3 dir, int atmosphere, vec3 tint, vec3 glow, vec3 fog, float time, int octaves, float pixel) {
     float up = clamp(dir.y, -1.0, 1.0);
     float horizon = exp(-abs(up) * 7.0);
     if (atmosphere == 1) {
@@ -35,7 +38,7 @@ vec3 realm_sky(sampler2D noise, vec3 dir, int atmosphere, vec3 tint, vec3 glow, 
         color += mix(glow * 0.9, fog * 2.6, smoothstep(0.0, 0.5, up)) * (1.0 - billow) * 0.6;
         color += glow * horizon * 0.9 + tint * pow(1.0 - max(up, 0.0), 6.0) * smoke * 0.25;
         vec3 rising = vec3(dir.x, dir.y - time * 0.015, dir.z);
-        color += glow * realm_stars(rising, 70.0, 0.22, time, 1.0) * smoothstep(0.55, 0.0, up) * 1.6;
+        color += glow * realm_stars(rising, 70.0, 0.22, time, 1.0, pixel) * smoothstep(0.55, 0.0, up) * 1.6;
         return color;
     }
     if (atmosphere == 2) {
@@ -45,7 +48,7 @@ vec3 realm_sky(sampler2D noise, vec3 dir, int atmosphere, vec3 tint, vec3 glow, 
         float galaxy = exp(-pow(dot(dir, axis), 2.0) * 22.0);
         vec2 gp = vec2(atan(dir.x, dir.z) * 3.0, dir.y * 6.0);
         color += mix(tint, glow, 0.5) * galaxy * (0.25 + 0.5 * realm_tfbm(noise, gp, octaves)) * 0.45;
-        color += glow * realm_stars(dir, 140.0, 0.18, time, 1.0) * (0.6 + galaxy) * smoothstep(-0.02, 0.2, up);
+        color += glow * realm_stars(dir, 140.0, 0.18, time, 1.0, pixel) * (0.6 + galaxy) * smoothstep(-0.02, 0.2, up);
         color += mix(glow, tint, 0.4) * realm_aurora(noise, dir, 0.55, time * 0.6, octaves) * 0.55;
         color += tint * horizon * 0.12;
         return color;
@@ -55,7 +58,7 @@ vec3 realm_sky(sampler2D noise, vec3 dir, int atmosphere, vec3 tint, vec3 glow, 
     float a = realm_aurora(noise, dir, 0.35, time, octaves);
     float b = octaves > 1 ? realm_aurora(noise, dir.zyx * vec3(1.0, 1.0, -1.0), 0.9, time * 0.8 + 13.0, octaves) : 0.0;
     color += mix(glow, tint, smoothstep(0.1, 0.6, up)) * (a + b * 0.6) * 0.9;
-    color += tint * realm_stars(dir, 110.0, 0.2, time, 0.6) * 0.5 * smoothstep(0.0, 0.25, up);
+    color += tint * realm_stars(dir, 110.0, 0.2, time, 0.6, pixel) * 0.5 * smoothstep(0.0, 0.25, up);
     color += glow * horizon * 0.08;
     return color;
 }

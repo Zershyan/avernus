@@ -79,11 +79,6 @@ float realm_tfbm(sampler2D noise, vec2 p, int octaves) {
     return sum;
 }
 
-// 交错梯度噪声，用于抖动消除条带。
-float realm_ign(vec2 fragCoord) {
-    return fract(52.9829189 * fract(dot(fragCoord, vec2(0.06711056, 0.00583715))));
-}
-
 // 噪声纹理的 R 通道是 G 偏移 (37, 17) 的值，单次采样即可在 z 方向插值。
 float realm_noise3(sampler2D noise, vec3 p) {
     vec3 i = floor(p);

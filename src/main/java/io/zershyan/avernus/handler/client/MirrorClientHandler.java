@@ -21,7 +21,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 
-/** 胸饰镜快捷键与镜子提示：常显背景文案，Shift 境相、Alt 特殊效果、Ctrl 用法。 */
+/** 胸饰镜快捷键与镜子提示：境相与效果名常显，Ctrl 效果详情、Shift 境相描述、Alt 用法。 */
 public final class MirrorClientHandler {
     private MirrorClientHandler() {
     }
@@ -41,21 +41,20 @@ public final class MirrorClientHandler {
         List<Component> tooltip = event.getToolTip();
         MirrorForm form = mirror.form(event.getItemStack());
         if (MirrorForms.resolve(form).isEmpty()) tooltip.add(AvernusKeyLang.TooltipInvalidForm.copy().withStyle(ChatFormatting.RED));
-        if (Screen.hasShiftDown()) {
-            tooltip.add(AvernusKeyLang.TooltipAspect.get(mirror.aspect().getName()).withStyle(ChatFormatting.DARK_PURPLE));
-            tooltip.add(mirror.aspect().getDescription().withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
-        } else if (Screen.hasAltDown()) {
-            effects(tooltip, form.traits());
-        } else if (Screen.hasControlDown()) {
+        tooltip.add(AvernusKeyLang.TooltipAspect.get(mirror.aspect().getName()).withStyle(ChatFormatting.DARK_PURPLE));
+        if (Screen.hasShiftDown()) tooltip.add(mirror.aspect().getDescription().withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        effects(tooltip, form.traits(), Screen.hasControlDown());
+        if (Screen.hasAltDown()) {
             usage(tooltip);
-        } else {
+        } else if (!Screen.hasShiftDown() && !Screen.hasControlDown()) {
             tooltip.add(AvernusKeyLang.TooltipLore1.copy().withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
             tooltip.add(AvernusKeyLang.TooltipLore2.copy().withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
             tooltip.add(AvernusKeyLang.TooltipHint.copy().withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 
-    private static void effects(List<Component> tooltip, List<ResourceLocation> ids) {
+    /** 效果名常显，detailed 时附上详细描述。 */
+    private static void effects(List<Component> tooltip, List<ResourceLocation> ids, boolean detailed) {
         if (ids.isEmpty()) {
             tooltip.add(AvernusKeyLang.TooltipNoEffects.copy().withStyle(ChatFormatting.GRAY));
             return;
@@ -63,10 +62,10 @@ public final class MirrorClientHandler {
         tooltip.add(AvernusKeyLang.TooltipEffects.copy().withStyle(ChatFormatting.DARK_PURPLE));
         for (ResourceLocation id : ids) {
             RealmTrait trait = AvernusRegistries.REALM_TRAIT.get(id);
-            Component name = trait != null ? trait.getName() : Component.literal(id.toString());
-            Component description = trait != null ? trait.getDescription() : Component.empty();
-            tooltip.add(AvernusKeyLang.TooltipEffect.get(name.copy().withStyle(ChatFormatting.LIGHT_PURPLE), description)
-                    .withStyle(ChatFormatting.GRAY));
+            Component name = (trait != null ? trait.getName() : Component.literal(id.toString())).copy().withStyle(ChatFormatting.LIGHT_PURPLE);
+            tooltip.add(detailed && trait != null
+                    ? AvernusKeyLang.TooltipEffect.get(name, trait.getDescription()).withStyle(ChatFormatting.GRAY)
+                    : Component.literal(" ").append(name));
         }
     }
 
@@ -77,7 +76,5 @@ public final class MirrorClientHandler {
             Component bound = key.isUnbound() ? AvernusKeyLang.TooltipUnbound.copy() : key.getTranslatedKeyMessage();
             tooltip.add(AvernusKeyLang.TooltipCurioKey.get(bound).withStyle(ChatFormatting.GRAY));
         }
-        tooltip.add(AvernusKeyLang.TooltipAspectHint.copy().withStyle(ChatFormatting.GRAY));
-        tooltip.add(AvernusKeyLang.TooltipSmithingHint.copy().withStyle(ChatFormatting.GRAY));
     }
-}
+    }

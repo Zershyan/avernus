@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
 
+import static org.lwjgl.opengl.GL11.glDepthRange;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glIsEnabled;
@@ -28,7 +29,7 @@ import static org.lwjgl.opengl.GL32.GL_DEPTH_CLAMP;
 
 /**
  * 摄像机身处领域已覆盖的范围时，境外一概不绘制：覆盖范围（圆柱与波面圆盘的交集）之外的分区、实体与方块实体被剔除，
- * 沿覆盖边界立一圈朝内的纯黑墙，头顶仍是境相天空。展开与收缩时边界随波面移动。
+ * 沿覆盖边界立一圈墙填补剔除留下的空洞；墙的深度压到最远处，后处理把它当作天空画上境相天空。展开与收缩时边界随波面移动。
  */
 public final class RealmEnclosure {
     /** 墙面每段弧长（格）。 */
@@ -111,7 +112,7 @@ public final class RealmEnclosure {
         return -b + Math.sqrt(Math.max(0.0, b * b - (ox * ox + oz * oz - radius * radius)));
     }
 
-    /** 在实心方块之后绘制：写入深度，挡住其后的一切。 */
+    /** 在实心方块之后绘制，深度恒为 1：只填补天空像素，不遮挡任何几何。 */
     public static void render(RenderLevelStageEvent event) {
         Realm realm = enclosing;
         var shader = GameRenderer.getPositionColorShader();
@@ -144,6 +145,7 @@ public final class RealmEnclosure {
         boolean clamped = glIsEnabled(GL_DEPTH_CLAMP);
         if (!clamped) glEnable(GL_DEPTH_CLAMP);
         RenderSystem.disableCull();
+        glDepthRange(1.0, 1.0);
         try {
             shader.setDefaultUniforms(VertexFormat.Mode.QUADS, event.getModelViewMatrix(), event.getProjectionMatrix(), mc.getWindow());
             shader.apply();
@@ -151,6 +153,7 @@ public final class RealmEnclosure {
         } finally {
             shader.clear();
             VertexBuffer.unbind();
+            glDepthRange(0.0, 1.0);
             RenderSystem.enableCull();
             if (!clamped) glDisable(GL_DEPTH_CLAMP);
         }

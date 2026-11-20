@@ -12,11 +12,11 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 public class AvernusRegistryLang extends AvernusLang {
 
-    /** 境相名、描述与对应镜子的名称。 */
+    /** 境相名、描述与对应镜子的名称；境相只在提示中显示，不进物品名。 */
     private void aspect(DeferredHolder<RealmAspect, RealmAspect> holder, String enUs, String zhCn, String descEn, String descZh) {
         addFinalEntry(RealmAspect.languageKey(holder.getId()), enUs, zhCn);
         addFinalEntry(RealmAspect.descriptionKey(holder.getId()), descEn, descZh);
-        addFinalEntry(AvernusItems.MIRRORS_BY_ASPECT.get(holder).get(), "Mirror of Avernus: " + enUs, "阿维尔诺之镜·" + zhCn);
+        addFinalEntry(AvernusItems.MIRRORS_BY_ASPECT.get(holder).get(), "Mirror of Avernus", "阿维尔诺之镜");
     }
 
     /** 类型名、作用说明与对应印记的名称。 */

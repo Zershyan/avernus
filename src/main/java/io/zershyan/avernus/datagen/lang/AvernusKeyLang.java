@@ -28,8 +28,8 @@ public class AvernusKeyLang extends AvernusLang {
             "shatter it, and the world beneath your feet is rewritten in its likeness.",
             "击碎它，脚下的世界便照它的模样重写。");
     public static final MutableComponent TooltipHint = entry(TOOLTIP + "hint",
-            "Hold Shift: aspect · Alt: special effects · Ctrl: usage",
-            "按住 Shift 查看境相 · Alt 查看特殊效果 · Ctrl 查看用法");
+            "Hold Ctrl: effect details · Shift: aspect · Alt: usage",
+            "按住 Ctrl 查看效果详情 · Shift 查看境相 · Alt 查看用法");
     public static final LazyComponent TooltipAspect = entryLazy(TOOLTIP + "aspect", "Aspect: %s", "境相：%s");
     public static final MutableComponent TooltipEffects = entry(TOOLTIP + "effects", "Special effects:", "特殊效果：");
     public static final LazyComponent TooltipEffect = entryLazy(TOOLTIP + "effect", " %s: %s", " %s：%s");
@@ -41,12 +41,6 @@ public class AvernusKeyLang extends AvernusLang {
     public static final LazyComponent TooltipCurioKey = entryLazy(TOOLTIP + "curio_key",
             "Worn as body charm: press %s to toggle", "佩戴于胸饰：按 %s 开关领域");
     public static final MutableComponent TooltipUnbound = entry(TOOLTIP + "unbound", "Unbound", "未绑定");
-    public static final MutableComponent TooltipSmithingHint = entry(TOOLTIP + "smithing_hint",
-            "Smithing: a sigil with an empty template engraves its effect; with a feather it is removed",
-            "锻造：模板留空放入印记即刻入其效果，模板放羽毛则移除");
-    public static final MutableComponent TooltipAspectHint = entry(TOOLTIP + "aspect_hint",
-            "Crafting: surround the mirror with eight aspect materials to change its aspect",
-            "工作台：镜子四周围满八个境相材料即可转换境相");
     public static final MutableComponent TooltipSigilUsage = entry(TOOLTIP + "sigil_usage",
             "Smithing table: leave the template empty to engrave it into a mirror; a feather removes it",
             "锻造台：模板留空即可刻入镜子；模板放羽毛则移除");

@@ -77,14 +77,15 @@ void upsample(float dist, out vec4 fog, out vec3 fx) {
             ivec2 t = min(origin + ivec2(i, j), size - 1);
             vec4 light = texelFetch(FxSampler, t, 0);
             float bilinear = (i == 0 ? 1.0 - f.x : f.x) * (j == 0 ? 1.0 - f.y : f.y);
-            float w = (bilinear + 1.0e-3) / (1.0e-3 + abs(light.a - dist) / dist);
+            float rel = abs(light.a - dist) / dist;
+            float w = bilinear * (0.02 + exp(-rel * rel * 400.0));
             fog += texelFetch(FogSampler, t, 0) * w;
             fx += light.rgb * w;
             total += w;
         }
     }
-    fog /= total;
-    fx /= total;
+    fog /= max(total, 1.0e-5);
+    fx /= max(total, 1.0e-5);
 }
 
 // 屏幕扭曲：炼狱贴地热浪（随距离增强），光幕附近按其亮度折射。
@@ -115,7 +116,8 @@ void main() {
     vec3 base = texture(DiffuseSampler, uv).rgb;
     vec3 color = mix(base, grade(base), Strength) * fog.a + fog.rgb;
 
-    // 地表环与波前后方的余辉（细线，保留全分辨率）
+    // 地表环与波前后方的余辉（细线，保留全分辨率）；footprint 为一个像素覆盖的水平距离
+    float footprint = min(length(fwidth(pos.xz)), 8.0);
     for (int i = 0; i < 4; i++) {
         if (i >= RealmCount || sky) break;
         vec4 shape = RealmShape[i];
@@ -124,7 +126,9 @@ void main() {
         if (shape.w <= 0.0 || abs(h) >= 2.5 || length(pos.xz - shape.xy) > shape.z + 0.5) continue;
         float flow = realm_flow(RealmLook[i]);
         float delta = length(pos.xz - src.xy) - shape.w;
-        float ring = exp(-delta * delta * 0.5) * (0.75 + 0.25 * sin(Time * 6.0 + length(pos.xz) * 0.5));
+        // 环宽不小于像素足迹，远处变宽变淡而不是时有时无
+        float width = max(1.0, footprint);
+        float ring = exp(-delta * delta * 0.5 / (width * width)) / width * (0.75 + 0.25 * sin(Time * 6.0 + length(pos.xz) * 0.5));
         float trail = flow > 0.0 && delta < 0.0 ? exp(delta / 6.0) : flow < 0.0 && delta > 0.0 ? exp(-delta / 6.0) : 0.0;
         fx += RealmLook[i].rgb * (ring * 0.9 + trail * 0.3) * (1.0 - abs(h) / 2.5);
     }

@@ -65,7 +65,8 @@ vec4 volumetric(vec3 dir, float limit) {
     if (top < 0.0) enter = dir.y < -1.0e-4 ? top / dir.y : exit;
     else if (dir.y > 1.0e-4) exit = min(exit, top / dir.y);
     int octaves = Quality >= 4 ? 4 : 3;
-    float jitter = realm_ign(gl_FragCoord.xy);
+    // 无结构哈希抖动：IGN 的斜向规律在掠射的远处地面会放大成条纹
+    float jitter = realm_hash(gl_FragCoord.xy);
     vec3 baseColor = mix(FogTint * 1.3, Glow * 0.6, Atmosphere == 2 ? 0.1 : 0.15);
     vec3 scatter = vec3(0.0);
     float transmit = 1.0;
@@ -106,6 +107,7 @@ void main() {
     vec3 pos = realm_view_pos(InvViewProj, uv, depth);
     vec3 dir = normalize(pos);
     float dist = sky ? REALM_SKY_DISTANCE : length(pos);
+    float pixel = length(fwidth(dir));
 
     vec3 scatter = vec3(0.0);
     float transmit = 1.0;
@@ -130,7 +132,7 @@ void main() {
         if (cover > 0.0) {
             int octaves = Quality >= 4 ? 4 : Quality >= 3 ? 3 : Quality >= 2 ? 2 : 1;
             cover *= Strength;
-            scatter = mix(scatter, realm_sky(NoiseSampler, dir, Atmosphere, Tint, Glow, FogTint, Time, octaves), cover);
+            scatter = mix(scatter, realm_sky(NoiseSampler, dir, Atmosphere, Tint, Glow, FogTint, Time, octaves, pixel), cover);
             transmit *= 1.0 - cover;
         }
     }

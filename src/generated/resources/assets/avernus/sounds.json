@@ -1,50 +1,36 @@
 {
   "realm.contract": {
     "sounds": [
-      {
-        "type": "event",
-        "name": "block.beacon.deactivate",
-        "pitch": 0.6
-      }
+      "avernus:realm/contract_1",
+      "avernus:realm/contract_2"
     ],
     "subtitle": "subtitles.avernus.realm.contract"
   },
   "realm.expand": {
     "sounds": [
-      {
-        "type": "event",
-        "name": "block.beacon.activate",
-        "pitch": 0.6
-      }
+      "avernus:realm/expand_1",
+      "avernus:realm/expand_2"
     ],
     "subtitle": "subtitles.avernus.realm.expand"
   },
   "realm.mirror_return": {
     "sounds": [
-      {
-        "type": "event",
-        "name": "item.trident.return"
-      }
+      "avernus:realm/mirror_return_1",
+      "avernus:realm/mirror_return_2"
     ],
     "subtitle": "subtitles.avernus.realm.mirror_return"
   },
   "realm.mirror_throw": {
     "sounds": [
-      {
-        "type": "event",
-        "name": "item.trident.throw",
-        "pitch": 1.2
-      }
+      "avernus:realm/mirror_throw_1",
+      "avernus:realm/mirror_throw_2"
     ],
     "subtitle": "subtitles.avernus.realm.mirror_throw"
   },
   "realm.shatter": {
     "sounds": [
-      {
-        "type": "event",
-        "name": "block.glass.break",
-        "pitch": 0.6
-      }
+      "avernus:realm/shatter_1",
+      "avernus:realm/shatter_2"
     ],
     "subtitle": "subtitles.avernus.realm.shatter"
   }
