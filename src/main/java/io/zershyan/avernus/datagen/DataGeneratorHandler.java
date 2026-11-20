@@ -6,6 +6,7 @@ import io.zershyan.avernus.datagen.provider.ModItemTagsProvider;
 import io.zershyan.avernus.datagen.provider.ModLangProvider;
 import io.zershyan.avernus.datagen.provider.ModParticleProvider;
 import io.zershyan.avernus.datagen.provider.ModRecipeProvider;
+import io.zershyan.avernus.datagen.provider.ModSoundProvider;
 import io.zershyan.avernus.datagen.provider.PackMetadataProvider;
 import io.zershyan.avernus.datagen.provider.RealmShaderProvider;
 import io.zershyan.avernus.datagen.provider.RealmVisualProvider;
@@ -26,6 +27,7 @@ public class DataGeneratorHandler {
             event.addProvider(new RealmShaderProvider(packOutput));
             event.addProvider(new RealmVisualProvider(packOutput));
             event.addProvider(new ModParticleProvider(packOutput, helper));
+            event.addProvider(new ModSoundProvider(packOutput, helper));
         }
         event.addProvider(new ModRecipeProvider(packOutput, event.getLookupProvider()));
         event.addProvider(new ModItemTagsProvider(packOutput, event.getLookupProvider(), helper));

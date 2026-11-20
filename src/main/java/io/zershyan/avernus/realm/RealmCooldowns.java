@@ -26,12 +26,16 @@ public final class RealmCooldowns {
         if (!(entity.level() instanceof ServerLevel level)) return;
         int ticks = ServerConfig.CLOSE_COOLDOWN_TICKS.get();
         entity.setData(AvernusAttachments.REALM_COOLDOWN, new RealmCooldown(now(level) + ticks));
-        if (entity instanceof Player player) player.getCooldowns().addCooldown(AvernusItems.MIRROR.get(), ticks);
+        if (entity instanceof Player player) showCooldown(player, ticks);
     }
 
     /** 重新登录或重生后，用权威剩余时间恢复物品冷却条显示。 */
     public static void refreshDisplay(Player player) {
         long remaining = remaining(player);
-        if (remaining > 0L) player.getCooldowns().addCooldown(AvernusItems.MIRROR.get(), (int) remaining);
+        if (remaining > 0L) showCooldown(player, (int) remaining);
+    }
+
+    private static void showCooldown(Player player, int ticks) {
+        AvernusItems.MIRRORS_BY_ASPECT.values().forEach(mirror -> player.getCooldowns().addCooldown(mirror.get(), ticks));
     }
 }

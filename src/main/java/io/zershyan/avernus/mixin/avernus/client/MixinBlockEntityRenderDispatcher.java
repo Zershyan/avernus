@@ -1,5 +1,6 @@
 package io.zershyan.avernus.mixin.avernus.client;
 
+import io.zershyan.avernus.client.realm_render.RealmEnclosure;
 import io.zershyan.avernus.client.realm_render.RealmRenderState;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
@@ -16,6 +17,6 @@ public abstract class MixinBlockEntityRenderDispatcher {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private <E extends BlockEntity> void avernus$hideCovered(E blockEntity, float partialTick, PoseStack poseStack,
                                                             MultiBufferSource bufferSource, CallbackInfo ci) {
-        if (RealmRenderState.hides(blockEntity.getBlockPos())) ci.cancel();
+        if (RealmRenderState.hides(blockEntity.getBlockPos()) || !RealmEnclosure.keeps(blockEntity.getBlockPos())) ci.cancel();
     }
 }

@@ -20,6 +20,8 @@ public class AvernusRealmTraits {
     public static final DeferredHolder<RealmTrait, RealmTrait> BOUNDLESS;
     public static final DeferredHolder<RealmTrait, RealmTrait> UNREALITY = REGISTER.register("unreality", RealmTrait::new);
     public static final DeferredHolder<RealmTrait, RealmTrait> ETERNITY = REGISTER.register("eternity", RealmTrait::new);
+    public static final DeferredHolder<RealmTrait, RealmTrait> EQUALITY = REGISTER.register("equality", RealmTrait::new);
+    public static final DeferredHolder<RealmTrait, RealmTrait> FREEDOM = REGISTER.register("freedom", RealmTrait::new);
 
     static {
         WEAK_WATER = REGISTER.register("weak_water", () -> new ExclusiveRealmTrait(AvernusRealmTraits.BOUNDLESS));

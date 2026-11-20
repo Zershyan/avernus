@@ -10,7 +10,7 @@ final class CuriosAccess {
     private static final String BODY = "body";
 
     static void registerMirror() {
-        CuriosApi.registerCurio(AvernusApi.mirrorItem(), new ICurioItem() {});
+        AvernusApi.mirrorItems().forEach(mirror -> CuriosApi.registerCurio(mirror, new ICurioItem() {}));
     }
 
     static ItemStack findWornMirror(LivingEntity entity) {

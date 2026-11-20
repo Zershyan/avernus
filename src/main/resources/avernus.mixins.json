@@ -17,6 +17,7 @@
     "avernus.common.MixinFireBlock",
     "avernus.common.MixinFlowingFluid",
     "avernus.common.MixinGroundPathNavigation",
+    "avernus.common.MixinItemStack",
     "avernus.common.MixinHoglinAi",
     "avernus.common.MixinLevel",
     "avernus.common.MixinLevelChunk",
@@ -24,6 +25,7 @@
     "avernus.common.MixinPathNavigationRegion",
     "avernus.common.MixinPathfindingContext",
     "avernus.common.MixinPiglinAi",
+    "avernus.common.MixinPlayer",
     "avernus.common.MixinPiglinBruteAi",
     "avernus.common.MixinPointedDripstoneBlock",
     "avernus.common.MixinServerGamePacketListenerImpl",
@@ -35,6 +37,8 @@
   "client": [
     "avernus.client.MixinBlockEntityRenderDispatcher",
     "avernus.client.MixinCamera",
+    "avernus.client.MixinEntityRenderDispatcher",
+    "avernus.client.MixinEntityRenderer",
     "avernus.client.MixinLevelRenderer",
     "avernus.client.MixinScreenEffectRenderer",
     "avernus.client.MixinViewArea"

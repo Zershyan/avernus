@@ -1,0 +1,8 @@
+{
+  "type": "avernus:mirror_trait",
+  "material": {
+    "item": "avernus:equality_sigil"
+  },
+  "remove": true,
+  "trait": "avernus:equality"
+}

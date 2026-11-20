@@ -40,6 +40,14 @@ repositories {
         url = "https://maven.theillusivec4.top/"
         content { includeGroup "top.theillusivec4.curios" }
     }
+    maven {
+        name = "JEI"
+        url = "https://maven.blamejared.com/"
+        content {
+            includeGroup "mezz.jei"
+            includeGroup "net.mezzdev.config"
+        }
+    }
 }
 
 base {
@@ -124,6 +132,11 @@ dependencies {
     if (curios_dev_runtime.toBoolean()) {
         localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
     }
+    // JEI 为可选依赖：只编译其 API，用于在锻造页显示类型配方
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    if (jei_dev_runtime.toBoolean()) {
+        localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    }
 }
 
 tasks.named('check') {
@@ -148,6 +161,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_url                : mod_url,
     ]
     inputs.properties replaceProperties
+    filteringCharset = 'UTF-8'
     expand replaceProperties
     from "src/main/templates"
     into "build/generated/sources/modMetadata"

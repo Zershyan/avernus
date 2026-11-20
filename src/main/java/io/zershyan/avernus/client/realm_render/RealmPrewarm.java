@@ -31,17 +31,17 @@ final class RealmPrewarm {
         int rings = Math.max(Math.max(x - x0, x1 - x), Math.max(z - z0, z1 - z));
         var footprint = realm.coverage(realm.startTime() + realm.timeline().shatterDelay() + realm.timeline().waveTicks());
         RealmMeshKey style = RealmMeshKey.of(realm);
-        int surface = SectionPos.blockToSectionCoord(style.layerY());
+        int surface = SectionPos.blockToSectionCoord(style.layerY()), floor = SectionPos.blockToSectionCoord(style.floorY());
         var lookup = (IMixinViewArea) view;
         for (BlockPos column : BlockPos.spiralAround(new BlockPos(x, 0, z), rings, Direction.EAST, Direction.SOUTH)) {
             int cx = column.getX(), cz = column.getZ();
             if (cx < x0 || cx > x1 || cz < z0 || cz > z1 || footprint.tile(cx * 16 - 1, cz * 16 - 1, 18) < 0) continue;
             var chunk = level.getChunk(cx, cz, ChunkStatus.FULL, false);
             if (chunk == null) continue;
-            int first = Math.max(level.getMinSection(), SectionPos.blockToSectionCoord(style.layerY() - 1));
+            int first = Math.max(level.getMinSection(), SectionPos.blockToSectionCoord(style.floorY() - 1));
             int last = Math.max(surface, level.getMinSection() + chunk.getHighestFilledSectionIndex());
             for (int sy = first; sy <= last && sy < level.getMaxSection(); sy++) {
-                boolean isSurface = sy == surface;
+                boolean isSurface = sy == surface || sy == floor;
                 if (!isSurface && chunk.isSectionEmpty(sy)) continue;
                 var origin = new BlockPos(cx * 16, sy * 16, cz * 16);
                 var section = lookup.avernus$sectionAt(origin);

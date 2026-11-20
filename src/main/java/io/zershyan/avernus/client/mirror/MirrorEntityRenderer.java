@@ -23,7 +23,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -68,6 +67,7 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
     private static final int INTERIOR = 85;
     /** 碎裂前颤动的最大幅度（格）。 */
     private static final float TREMBLE = 0.05F;
+    private static final MirrorChoreography.Pose ITEM_POSE = new MirrorChoreography.Pose(Vec3.ZERO, 0.0F, -1.0F, 0.0F);
 
     public MirrorEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -88,7 +88,8 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
         ResourceLocation texture = getTextureLocation(entity);
         RealmFxQuality quality = ClientConfig.quality();
         if (quality == RealmFxQuality.OFF || AvernusShaders.Effect.MIRROR.get() == null) {
-            draw(buffers.getBuffer(RenderType.entityTranslucent(texture)), poseStack, texture, realm.seed(), pose, origin, t, null);
+            draw(buffers.getBuffer(RenderType.entityTranslucent(texture)), poseStack, texture, realm.seed(), pose, origin, t,
+                    new Plain(LightTexture.FULL_BRIGHT));
             return;
         }
         int glow = RealmVisuals.get(realm.aspect()).glowColor();
@@ -105,16 +106,41 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
         }
     }
 
-    /**
-     * 顶点附带的着色参数：颜色为境相辉光，UV1 为（裂纹量，描边量 | 残影与隐藏边标志位），UV2 为三角形重心坐标。
-     * 为空时按原版实体着色器的格式写入。
-     */
-    private record Style(int glow, int alpha, float crack, boolean outline, boolean ghost) {
+    /** 顶点除位置、贴图坐标与法线之外的着色参数。 */
+    private interface Paint {
+        void apply(VertexConsumer consumer, int hidden, int baryX, int baryY);
+    }
+
+    /** 原版实体着色器格式：白色、无覆盖层、指定光照。 */
+    private record Plain(int light) implements Paint {
+        @Override
+        public void apply(VertexConsumer consumer, int hidden, int baryX, int baryY) {
+            consumer.setColor(255, 255, 255, 255).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light);
+        }
+    }
+
+    /** 镜子着色器格式：颜色为境相辉光，UV1 为（裂纹量，描边量 | 残影与隐藏边标志位），UV2 为三角形重心坐标。 */
+    private record Style(int glow, int alpha, float crack, boolean outline, boolean ghost) implements Paint {
+        @Override
+        public void apply(VertexConsumer consumer, int hidden, int baryX, int baryY) {
+            consumer.setColor(glow >> 16 & 255, glow >> 8 & 255, glow & 255, alpha)
+                    .setUv1((int) (crack * 255.0F), (outline ? 255 : 0) + (ghost ? GHOST : 0) + hidden)
+                    .setUv2(baryX, baryY);
+        }
+    }
+
+    /** 物品形态：与飞出时同一面完整立体镜子，以 {@link #SIZE} 缩放进一格方块并居中。 */
+    public static void drawItem(VertexConsumer consumer, PoseStack poseStack, ResourceLocation texture, int light) {
+        poseStack.pushPose();
+        poseStack.translate(0.5F, 0.5F, 0.5F);
+        poseStack.scale(1.0F / SIZE, 1.0F / SIZE, 1.0F / SIZE);
+        draw(consumer, poseStack, texture, 0L, ITEM_POSE, Vec3.ZERO, 0.0F, new Plain(light));
+        poseStack.popPose();
     }
 
     /** 完整镜子画立体外壳加凹进的镜面；碎开后每块镜片是带薄厚度的板。 */
     private static void draw(VertexConsumer consumer, PoseStack poseStack, ResourceLocation texture, long seed, MirrorChoreography.Pose pose,
-                             Vec3 origin, float time, @Nullable Style style) {
+                             Vec3 origin, float time, Paint paint) {
         Vec3 offset = pose.center().subtract(origin);
         poseStack.pushPose();
         poseStack.translate(offset.x, offset.y, offset.z);
@@ -126,11 +152,11 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
                 float[] xyz = face.xyz(), uv = face.uv();
                 for (int i = 0; i < 4; i++) {
                     vertex(consumer, last, xyz[i * 3], xyz[i * 3 + 1], xyz[i * 3 + 2], uv[i * 2], uv[i * 2 + 1], face.normal(),
-                            style, 0, INTERIOR, INTERIOR);
+                            paint, 0, INTERIOR, INTERIOR);
                 }
             }
         }
-        shards(consumer, poseStack, seed, Math.max(0.0F, pose.spread()), pose.whole(), style);
+        shards(consumer, poseStack, seed, Math.max(0.0F, pose.spread()), pose.whole(), paint);
         poseStack.popPose();
     }
 
@@ -148,7 +174,7 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
      * 按真实玻璃的碎法切分：偏离中心的受力点向四角和若干随机边点放射出主裂纹，
      * 每条主裂纹在随机位置被一圈环形裂纹截断，内圈是尖楔、外圈是梯形块。
      */
-    private static void shards(VertexConsumer consumer, PoseStack poseStack, long seed, float spread, boolean whole, @Nullable Style style) {
+    private static void shards(VertexConsumer consumer, PoseStack poseStack, long seed, float spread, boolean whole, Paint paint) {
         RandomSource random = RandomSource.create(seed);
         Vector2f impact = new Vector2f((random.nextFloat() - 0.5F) * IMPACT_OFFSET, (random.nextFloat() - 0.5F) * IMPACT_OFFSET);
         List<Vector2f> rim = new ArrayList<>();
@@ -162,8 +188,8 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
         for (int i = 0; i < spokes; i++) ring[i] = new Vector2f(impact).lerp(rim.get(i), Mth.lerp(random.nextFloat(), RING_MIN, RING_MAX));
         for (int i = 0; i < spokes; i++) {
             int next = (i + 1) % spokes;
-            shard(consumer, poseStack, random, spread, whole, style, impact, ring[i], ring[next]);
-            shard(consumer, poseStack, random, spread, whole, style, ring[i], rim.get(i), rim.get(next), ring[next]);
+            shard(consumer, poseStack, random, spread, whole, paint, impact, ring[i], ring[next]);
+            shard(consumer, poseStack, random, spread, whole, paint, ring[i], rim.get(i), rim.get(next), ring[next]);
         }
     }
 
@@ -172,7 +198,7 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
      * 完整镜子时只画凹进的镜面，外壳由 {@link MirrorSolid} 提供；碎开后画成带薄厚度的板。
      */
     private static void shard(VertexConsumer consumer, PoseStack poseStack, RandomSource random, float spread, boolean whole,
-                              @Nullable Style style, Vector2f... polygon) {
+                              Paint paint, Vector2f... polygon) {
         Vector2f center = new Vector2f();
         for (Vector2f point : polygon) center.add(point);
         center.div(polygon.length);
@@ -188,61 +214,55 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
         poseStack.mulPose(new Quaternionf().rotationZ(-(float) Math.atan2(arm.x, arm.y) * FAN_TILT * reach + twist).rotateY(flutter));
         PoseStack.Pose last = poseStack.last();
         if (whole) {
-            face(consumer, last, polygon, center, MirrorSolid.GLASS, FRONT, style);
+            face(consumer, last, polygon, center, MirrorSolid.GLASS, FRONT, paint);
         } else {
-            face(consumer, last, polygon, center, SHARD_HALF_THICKNESS, FRONT, style);
-            face(consumer, last, polygon, center, -SHARD_HALF_THICKNESS, BACK, style);
-            rim(consumer, last, polygon, center, style);
+            face(consumer, last, polygon, center, SHARD_HALF_THICKNESS, FRONT, paint);
+            face(consumer, last, polygon, center, -SHARD_HALF_THICKNESS, BACK, paint);
+            rim(consumer, last, polygon, center, paint);
         }
         poseStack.popPose();
     }
 
     /** 镜片一面：以首点扇形三角化，三角形内部的对角线标记为非边缘，着色器不在那里画线。 */
     private static void face(VertexConsumer consumer, PoseStack.Pose pose, Vector2f[] polygon, Vector2f center, float z, Vector3f normal,
-                             @Nullable Style style) {
+                             Paint paint) {
         int last = polygon.length - 1;
         for (int i = 1; i < last; i++) {
             // 边 0-i 与 0-(i+1) 是否为内部对角线，分别对应重心坐标第三、第二分量
             int hidden = (i > 1 ? HIDE_Z : 0) | (i + 1 < last ? HIDE_Y : 0);
-            corner(consumer, pose, polygon[0], center, z, normal, style, hidden, 255, 0);
-            corner(consumer, pose, polygon[i], center, z, normal, style, hidden, 0, 255);
-            corner(consumer, pose, polygon[i + 1], center, z, normal, style, hidden, 0, 0);
-            corner(consumer, pose, polygon[i + 1], center, z, normal, style, hidden, 0, 0);
+            corner(consumer, pose, polygon[0], center, z, normal, paint, hidden, 255, 0);
+            corner(consumer, pose, polygon[i], center, z, normal, paint, hidden, 0, 255);
+            corner(consumer, pose, polygon[i + 1], center, z, normal, paint, hidden, 0, 0);
+            corner(consumer, pose, polygon[i + 1], center, z, normal, paint, hidden, 0, 0);
         }
     }
 
     /** 镜片侧边：每条边一个窄面，取边中点的贴图颜色。 */
-    private static void rim(VertexConsumer consumer, PoseStack.Pose pose, Vector2f[] polygon, Vector2f center, @Nullable Style style) {
+    private static void rim(VertexConsumer consumer, PoseStack.Pose pose, Vector2f[] polygon, Vector2f center, Paint paint) {
         float t = SHARD_HALF_THICKNESS;
         for (int i = 0; i < polygon.length; i++) {
             Vector2f a = polygon[i], b = polygon[(i + 1) % polygon.length];
             if (a.equals(b)) continue;
             Vector3f normal = new Vector3f(b.y - a.y, a.x - b.x, 0.0F).normalize();
             float u = ((a.x + b.x) / 2 + HALF) / SIZE, v = (HALF - (a.y + b.y) / 2) / SIZE;
-            vertex(consumer, pose, a.x - center.x, a.y - center.y, -t, u, v, normal, style, 0, INTERIOR, INTERIOR);
-            vertex(consumer, pose, b.x - center.x, b.y - center.y, -t, u, v, normal, style, 0, INTERIOR, INTERIOR);
-            vertex(consumer, pose, b.x - center.x, b.y - center.y, t, u, v, normal, style, 0, INTERIOR, INTERIOR);
-            vertex(consumer, pose, a.x - center.x, a.y - center.y, t, u, v, normal, style, 0, INTERIOR, INTERIOR);
+            vertex(consumer, pose, a.x - center.x, a.y - center.y, -t, u, v, normal, paint, 0, INTERIOR, INTERIOR);
+            vertex(consumer, pose, b.x - center.x, b.y - center.y, -t, u, v, normal, paint, 0, INTERIOR, INTERIOR);
+            vertex(consumer, pose, b.x - center.x, b.y - center.y, t, u, v, normal, paint, 0, INTERIOR, INTERIOR);
+            vertex(consumer, pose, a.x - center.x, a.y - center.y, t, u, v, normal, paint, 0, INTERIOR, INTERIOR);
         }
     }
 
     /** 镜面上的点：贴图按镜面位置取样，顶点相对镜片中心绘制。 */
     private static void corner(VertexConsumer consumer, PoseStack.Pose pose, Vector2f point, Vector2f center, float z, Vector3f normal,
-                               @Nullable Style style, int hidden, int baryX, int baryY) {
+                               Paint paint, int hidden, int baryX, int baryY) {
         vertex(consumer, pose, point.x - center.x, point.y - center.y, z, (point.x + HALF) / SIZE, (HALF - point.y) / SIZE, normal,
-                style, hidden, baryX, baryY);
+                paint, hidden, baryX, baryY);
     }
 
     private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v, Vector3f normal,
-                               @Nullable Style style, int hidden, int baryX, int baryY) {
+                               Paint paint, int hidden, int baryX, int baryY) {
         consumer.addVertex(pose, x, y, z);
-        if (style == null) {
-            consumer.setColor(255, 255, 255, 255).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT);
-        } else {
-            consumer.setColor(style.glow >> 16 & 255, style.glow >> 8 & 255, style.glow & 255, style.alpha)
-                    .setUv1((int) (style.crack * 255.0F), (style.outline ? 255 : 0) + (style.ghost ? GHOST : 0) + hidden)
-                    .setUv2(baryX, baryY);
-        }
+        paint.apply(consumer, hidden, baryX, baryY);
         consumer.setUv(u, v).setNormal(pose, normal.x, normal.y, normal.z);
     }
 

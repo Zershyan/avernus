@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import io.zershyan.avernus.client.realm_render.RealmEnvironment;
+import io.zershyan.avernus.client.realm_render.RealmLighting;
 import io.zershyan.avernus.client.realm_render.RealmRenderState;
 import io.zershyan.avernus.realm.RealmSets;
 import io.zershyan.avernus.registry.AvernusShaders;
@@ -19,6 +20,9 @@ import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.ViewArea;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.CompiledSection;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.RenderSection;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.LightLayer;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -32,6 +36,14 @@ public abstract class MixinLevelRenderer {
     @Shadow private @Nullable ClientLevel level;
     @Shadow private @Nullable ViewArea viewArea;
     @Shadow @Final private ObjectArrayList<RenderSection> visibleSections;
+
+    /** 粒子与方块实体读取的光照：境面以上天空光取满，区块网格线程传入的不是 ClientLevel，不受影响。 */
+    @WrapOperation(method = "getLightColor(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)I",
+            at = @At(value = "INVOKE", ordinal = 0,
+                    target = "Lnet/minecraft/world/level/BlockAndTintGetter;getBrightness(Lnet/minecraft/world/level/LightLayer;Lnet/minecraft/core/BlockPos;)I"))
+    private static int avernus$openSky(BlockAndTintGetter getter, LightLayer layer, BlockPos pos, Operation<Integer> original) {
+        return RealmLighting.skyLight(getter, pos, original.call(getter, layer, pos));
+    }
 
     @Inject(method = "allChanged", at = @At("HEAD"))
     private void avernus$resetOnRebuild(CallbackInfo ci) {

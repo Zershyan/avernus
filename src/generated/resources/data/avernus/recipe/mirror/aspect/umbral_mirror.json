@@ -1,0 +1,10 @@
+{
+  "type": "avernus:mirror_aspect",
+  "material": {
+    "item": "minecraft:echo_shard"
+  },
+  "result": {
+    "count": 1,
+    "id": "avernus:umbral_mirror"
+  }
+}

@@ -14,7 +14,8 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.BlockHitResult;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
-import io.zershyan.avernus.registry.data_component.MirrorForm;
+import io.zershyan.avernus.api.realm.MirrorForm;
+import io.zershyan.avernus.api.realm.RealmResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -168,7 +169,7 @@ public final class OriginalRequirementsScenarios {
 
     private static Realm open(GameTestHelper helper, LivingEntity owner, ResourceLocation... traits) {
         var form = new MirrorForm(AvernusRealmAspects.UMBRAL.getId(), List.of(traits));
-        helper.assertTrue(RealmManager.open(owner, form) == RealmManager.Result.OPENED, "测试领域应开启");
+        helper.assertTrue(RealmManager.open(owner, form) == RealmResult.OPENED, "测试领域应开启");
         return Objects.requireNonNull(RealmManager.find(helper.getLevel().getServer(), owner.getUUID()));
     }
 

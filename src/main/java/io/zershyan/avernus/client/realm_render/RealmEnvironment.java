@@ -114,8 +114,16 @@ public final class RealmEnvironment {
 
         List<RealmMoments.Moment> moments = RealmMoments.collect(level, camera.getEntity(), cam, partialTick);
         RealmVisualProfile visual = profile != null ? profile : moments.isEmpty() ? RealmVisualProfile.FALLBACK : moments.getFirst().visual();
-        double wave = realm == null ? -1.0 : moments.stream().filter(moment -> moment.realm() == realm)
-                .mapToDouble(RealmMoments.Moment::wave).findFirst().orElseGet(() -> realm.waveRadius(level.getGameTime()));
+        double wave = -1.0;
+        if (realm != null) {
+            wave = realm.waveRadius(level.getGameTime());
+            for (RealmMoments.Moment moment : moments) {
+                if (moment.realm() == realm) {
+                    wave = moment.wave();
+                    break;
+                }
+            }
+        }
         Matrix4f viewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getModelViewMatrix());
         float time = (event.getRenderTick() % TIME_PERIOD_TICKS + partialTick) / 20.0F;
         var frame = new RealmPostFrame(quality, s, realm, visual, wave, viewProj, new Matrix4f(viewProj).invert(), cam, time,

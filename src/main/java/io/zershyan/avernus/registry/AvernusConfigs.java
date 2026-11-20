@@ -8,15 +8,18 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
-public class AvernusConfigs {
+public final class AvernusConfigs {
+    private AvernusConfigs() {
+    }
+
     public static void doRegister(ModContainer container, Dist dist) {
         container.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
-        container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         if (dist.isClient()) Client.register(container);
     }
 
-    private static class Client {
+    private static final class Client {
         static void register(ModContainer container) {
+            container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
             container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         }
     }

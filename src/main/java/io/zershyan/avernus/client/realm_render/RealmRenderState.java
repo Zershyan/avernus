@@ -50,6 +50,7 @@ public final class RealmRenderState {
         warming = false;
         warmTick = Long.MIN_VALUE;
         COLUMNS.close();
+        RealmEnclosure.reset();
         MESHES.reset();
         DRAW.clear();
         SUPPLEMENT.clear();
@@ -81,6 +82,7 @@ public final class RealmRenderState {
         var player = Minecraft.getInstance().player;
         BlockPos center = player != null ? player.blockPosition() : camera.getBlockPosition();
         cameraPosition = camera.getPosition();
+        RealmEnclosure.update(level, camera);
         boolean wasActive = active();
         COLUMNS.update(level, camera.getEntity(), SectionPos.blockToSectionCoord(center.getX()),
                 SectionPos.blockToSectionCoord(center.getZ()), view.getViewDistance());
@@ -133,6 +135,7 @@ public final class RealmRenderState {
         });
         DRAW.addAll(vanilla);
         DRAW.addAll(SUPPLEMENT);
+        if (RealmEnclosure.active()) DRAW.removeIf(section -> !RealmEnclosure.keeps(section));
         if (!SUPPLEMENT.isEmpty()) DRAW.sort(Comparator.comparingDouble(RealmRenderState::distance));
         relevant.sort(Comparator.comparingDouble(RealmRenderState::distance));
         for (RenderSection section : relevant) requestSurface(level, regions, section);
@@ -162,8 +165,10 @@ public final class RealmRenderState {
         if (range != null && range.intersects(origin.getY())) MESHES.request(level, regions, SectionPos.asLong(origin), null, cameraPosition);
     }
 
+    /** 分区是否含该形态的境面层或底板层。 */
     private static boolean sameLayer(RealmMeshKey style, BlockPos origin) {
-        return SectionPos.blockToSectionCoord(style.layerY()) == SectionPos.blockToSectionCoord(origin.getY());
+        int section = SectionPos.blockToSectionCoord(origin.getY());
+        return SectionPos.blockToSectionCoord(style.layerY()) == section || SectionPos.blockToSectionCoord(style.floorY()) == section;
     }
 
     public static List<RenderSection> supplement() {

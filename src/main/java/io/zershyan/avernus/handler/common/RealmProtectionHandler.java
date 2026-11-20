@@ -7,7 +7,6 @@ import net.minecraft.world.level.block.piston.PistonStructureResolver;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDestroyBlockEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
@@ -15,7 +14,7 @@ import net.neoforged.neoforge.event.level.PistonEvent;
 
 import java.util.List;
 
-/** 领域覆盖区的全来源方块保护：玩家、实体、爆炸、放置替换与活塞。 */
+/** 领域覆盖区的全来源方块保护兜底：玩家的挖掘与放置已在 MixinPlayer/MixinItemStack 中如冒险模式般禁止。 */
 public final class RealmProtectionHandler {
     private RealmProtectionHandler() {
     }
@@ -23,14 +22,6 @@ public final class RealmProtectionHandler {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onBreak(BlockEvent.BreakEvent event) {
         if (event.getLevel() instanceof Level level && RealmProtection.isProtected(level, event.getPos())) event.setCanceled(true);
-    }
-
-    /** 客户端同样可判定，挖掘进度直接为零，避免播放破坏动画。 */
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
-        event.getPosition().ifPresent(pos -> {
-            if (RealmProtection.isProtected(event.getEntity().level(), pos)) event.setCanceled(true);
-        });
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

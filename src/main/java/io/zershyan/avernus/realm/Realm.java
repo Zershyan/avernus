@@ -1,15 +1,16 @@
 package io.zershyan.avernus.realm;
 
+import io.zershyan.avernus.api.realm.MirrorForm;
 import io.zershyan.avernus.api.realm.RealmPhase;
 import io.zershyan.avernus.api.realm.RealmView;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
-import io.zershyan.avernus.registry.data_component.MirrorForm;
 import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -44,12 +46,12 @@ public final class Realm implements RealmView {
 
     public record Snapshot(UUID id, UUID ownerId, int ownerEntityId, ResourceKey<Level> dimension, MirrorForm form,
                            int height, int radius, long sequence, long startTime, long seed, RealmTimeline timeline,
-                           Vec3 launchOrigin, float launchYaw, float launchPitch, double sourceOffsetX, double sourceOffsetZ,
+                           Vec3 launchOrigin, float launchYaw, double sourceOffsetX, double sourceOffsetZ,
                            Motion motion) {
         public static final StreamCodec<RegistryFriendlyByteBuf, Snapshot> STREAM_CODEC = StreamCodec.of(Realm::encode, Realm::decode);
 
         public @Nullable Realm instantiate() {
-            return form.resolve().map(resolved -> new Realm(this, resolved)).orElse(null);
+            return MirrorForms.resolve(form).map(resolved -> new Realm(this, resolved)).orElse(null);
         }
     }
 
@@ -58,7 +60,7 @@ public final class Realm implements RealmView {
     private final int ownerEntityId;
     private final ResourceKey<Level> dimension;
     private final MirrorForm form;
-    private final MirrorForm.Resolved resolved;
+    private final MirrorForms.Resolved resolved;
     private final int height;
     private final int radius;
     private final long sequence;
@@ -68,7 +70,6 @@ public final class Realm implements RealmView {
     /** 开镜时胸口位置与视线，用于镜子飞出轨迹。 */
     private final Vec3 launchOrigin;
     private final float launchYaw;
-    private final float launchPitch;
     /** 波源相对领域中心的水平偏移（永恒为零，随中心移动）。 */
     private final double sourceOffsetX;
     private final double sourceOffsetZ;
@@ -79,7 +80,7 @@ public final class Realm implements RealmView {
     private volatile Motion motion;
     private boolean shatterSoundPlayed;
 
-    public Realm(Snapshot state, MirrorForm.Resolved resolved) {
+    public Realm(Snapshot state, MirrorForms.Resolved resolved) {
         this.id = state.id;
         this.ownerId = state.ownerId;
         this.ownerEntityId = state.ownerEntityId;
@@ -94,7 +95,6 @@ public final class Realm implements RealmView {
         this.timeline = state.timeline;
         this.launchOrigin = state.launchOrigin;
         this.launchYaw = state.launchYaw;
-        this.launchPitch = state.launchPitch;
         this.sourceOffsetX = state.sourceOffsetX;
         this.sourceOffsetZ = state.sourceOffsetZ;
         this.motion = state.motion;
@@ -202,8 +202,21 @@ public final class Realm implements RealmView {
         }
     }
 
-    /** 几何对该主体是否生效：隔绝只作用于所有者及其拥有的弹射物；无主体查询不受隔绝领域影响。 */
+    /**
+     * 几何对该主体是否生效：脚底已落到境面层以下的主体留在真实世界（由平等类型负责抬升），
+     * 其余按隔绝规则判定。
+     */
     public boolean geometryAppliesTo(@Nullable Entity subject) {
+        return (subject == null || !belowSurface(subject)) && reaches(subject);
+    }
+
+    /** 脚底低于境面层中线即视为在境面以下。 */
+    public boolean belowSurface(Entity subject) {
+        return subject.getY() < height - 1.5;
+    }
+
+    /** 隔绝只作用于所有者及其拥有的弹射物；无主体查询不受隔绝领域影响。 */
+    public boolean reaches(@Nullable Entity subject) {
         if (!isolated) return true;
         if (subject == null) return false;
         if (ownerId.equals(subject.getUUID())) return true;
@@ -220,7 +233,7 @@ public final class Realm implements RealmView {
 
     public Snapshot snapshot() {
         return new Snapshot(id, ownerId, ownerEntityId, dimension, form, height, radius, sequence, startTime, seed,
-                timeline, launchOrigin, launchYaw, launchPitch, sourceOffsetX, sourceOffsetZ, motion);
+                timeline, launchOrigin, launchYaw, sourceOffsetX, sourceOffsetZ, motion);
     }
 
     public void applyMotion(Motion next) {
@@ -258,9 +271,9 @@ public final class Realm implements RealmView {
         return closeTime() < 0L || closeTime() > shatterTime();
     }
 
-    /** 碎裂位置：永恒在头顶，否则沿开镜视线飞出。 */
+    /** 碎裂位置：永恒在头顶，否则从眼睛沿开镜朝向水平飞出。 */
     public Vec3 shatterPoint() {
-        return eternal ? motion.head() : launchOrigin.add(Vec3.directionFromRotation(launchPitch, launchYaw).scale(timeline.flyDistance()));
+        return eternal ? motion.head() : launchOrigin.add(Vec3.directionFromRotation(0.0F, launchYaw).scale(timeline.flyDistance()));
     }
 
     /** 波面覆盖整个圆柱所需的半径。 */
@@ -291,13 +304,25 @@ public final class Realm implements RealmView {
     }
 
     @Override
+    public ResourceLocation aspectId() {
+        return form.aspect();
+    }
+
+    @Override
+    public List<ResourceLocation> traitIds() {
+        return form.traits();
+    }
+
     public RealmAspect aspect() {
         return resolved.aspect();
     }
 
-    @Override
     public Set<RealmTrait> traits() {
         return resolved.traits();
+    }
+
+    public boolean hasTrait(RealmTrait trait) {
+        return resolved.traits().contains(trait);
     }
 
     public MirrorForm form() {
@@ -369,10 +394,6 @@ public final class Realm implements RealmView {
         return launchYaw;
     }
 
-    public float launchPitch() {
-        return launchPitch;
-    }
-
     public boolean eternal() {
         return eternal;
     }
@@ -394,7 +415,7 @@ public final class Realm implements RealmView {
         UUIDUtil.STREAM_CODEC.encode(buf, realm.ownerId);
         buf.writeVarInt(realm.ownerEntityId);
         buf.writeResourceKey(realm.dimension);
-        MirrorForm.STREAM_CODEC.encode(buf, realm.form);
+        MirrorForms.STREAM_CODEC.encode(buf, realm.form);
         buf.writeVarInt(realm.height);
         buf.writeVarInt(realm.radius);
         buf.writeVarLong(realm.sequence);
@@ -403,7 +424,6 @@ public final class Realm implements RealmView {
         RealmTimeline.STREAM_CODEC.encode(buf, realm.timeline);
         buf.writeVec3(realm.launchOrigin);
         buf.writeFloat(realm.launchYaw);
-        buf.writeFloat(realm.launchPitch);
         buf.writeDouble(realm.sourceOffsetX);
         buf.writeDouble(realm.sourceOffsetZ);
         Motion.STREAM_CODEC.encode(buf, realm.motion);
@@ -411,9 +431,9 @@ public final class Realm implements RealmView {
 
     private static Snapshot decode(RegistryFriendlyByteBuf buf) {
         return new Snapshot(UUIDUtil.STREAM_CODEC.decode(buf), UUIDUtil.STREAM_CODEC.decode(buf), buf.readVarInt(),
-                buf.readResourceKey(net.minecraft.core.registries.Registries.DIMENSION), MirrorForm.STREAM_CODEC.decode(buf),
+                buf.readResourceKey(net.minecraft.core.registries.Registries.DIMENSION), MirrorForms.STREAM_CODEC.decode(buf),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarLong(), buf.readVarLong(), buf.readLong(),
-                RealmTimeline.STREAM_CODEC.decode(buf), buf.readVec3(), buf.readFloat(), buf.readFloat(),
+                RealmTimeline.STREAM_CODEC.decode(buf), buf.readVec3(), buf.readFloat(),
                 buf.readDouble(), buf.readDouble(), Motion.STREAM_CODEC.decode(buf));
     }
 

@@ -1,0 +1,8 @@
+{
+  "type": "avernus:mirror_trait",
+  "material": {
+    "item": "avernus:freedom_sigil"
+  },
+  "remove": true,
+  "trait": "avernus:freedom"
+}

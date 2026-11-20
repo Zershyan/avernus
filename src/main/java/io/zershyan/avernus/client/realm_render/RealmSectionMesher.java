@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
@@ -40,35 +41,51 @@ final class RealmSectionMesher {
     private RealmSectionMesher() {
     }
 
+    /** 境面层与其下的底板层：底板只在境面空洞或水面下露出顶面，侧面由着色器裁到领域外缘，遮住下方真实地形。 */
     static void buildSurface(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos origin,
                              RealmMeshKey style, Material material) {
         BlockAndTintGetter region = context.getRegion();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         BlockPos.MutableBlockPos side = new BlockPos.MutableBlockPos();
-        int ry = style.layerY() - origin.getY();
+        boolean hasSurface = SectionPos.blockToSectionCoord(style.layerY()) == SectionPos.blockToSectionCoord(origin.getY());
+        boolean hasFloor = !style.weakWater() && SectionPos.blockToSectionCoord(style.floorY()) == SectionPos.blockToSectionCoord(origin.getY());
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 pos.set(origin.getX() + x, style.layerY(), origin.getZ() + z);
                 RealmTerrain.Kind kind = style.kind(region.getBlockState(pos));
-                if (kind != RealmTerrain.Kind.SOLID && kind != RealmTerrain.Kind.WATER) continue;
-                boolean water = kind == RealmTerrain.Kind.WATER;
-                VertexConsumer buffer = context.getOrCreateChunkBuffer(water ? RenderType.translucent() : RenderType.solid());
-                for (Direction dir : DIRECTIONS) {
-                    if (dir == Direction.DOWN) continue;
-                    side.setWithOffset(pos, dir);
-                    boolean hiddenByReal = dir.getAxis().isHorizontal() && region.getBlockState(side).isSolidRender(region, side);
-                    face(buffer, region, dir, x, ry, z, water ? WATER_TOP : 1.0F,
-                            water ? (dir.getAxis().isHorizontal() ? material.flow : material.still) : material.solid, water ? material.waterColor : 0xFFFFFF,
-                            light(region, side), hiddenByReal ? 0 : 255);
-                }
-                if (water) {
-                    face(buffer, region, Direction.DOWN, x, ry + WATER_TOP, z, 0.0F, material.still,
-                            material.waterColor, light(region, pos), 255);
-                } else if (!region.getBlockState(side.setWithOffset(pos, Direction.DOWN)).isSolidRender(region, side)) {
-                    face(buffer, region, Direction.DOWN, x, ry, z, 0.0F, material.solid,
-                            0xFFFFFF, light(region, side), 255);
-                }
+                if (hasSurface) surfaceBlock(context, region, pos, side, kind, x, z, style.layerY() - origin.getY(), material);
+                if (hasFloor) floorBlock(context, region, pos.setY(style.floorY()), side, kind != RealmTerrain.Kind.SOLID, x, z,
+                        style.floorY() - origin.getY(), material);
             }
+        }
+    }
+
+    private static void surfaceBlock(AddSectionGeometryEvent.SectionRenderingContext context, BlockAndTintGetter region, BlockPos pos,
+                                     BlockPos.MutableBlockPos side, RealmTerrain.Kind kind, int x, int z, int ry, Material material) {
+        if (kind != RealmTerrain.Kind.SOLID && kind != RealmTerrain.Kind.WATER) return;
+        boolean water = kind == RealmTerrain.Kind.WATER;
+        VertexConsumer buffer = context.getOrCreateChunkBuffer(water ? RenderType.translucent() : RenderType.solid());
+        for (Direction dir : DIRECTIONS) {
+            if (dir == Direction.DOWN) continue;
+            side.setWithOffset(pos, dir);
+            boolean hiddenByReal = dir.getAxis().isHorizontal() && region.getBlockState(side).isSolidRender(region, side);
+            face(buffer, region, dir, x, ry, z, water ? WATER_TOP : 1.0F,
+                    water ? (dir.getAxis().isHorizontal() ? material.flow : material.still) : material.solid, water ? material.waterColor : 0xFFFFFF,
+                    light(region, side), hiddenByReal ? 0 : 255);
+        }
+        if (water) face(buffer, region, Direction.DOWN, x, ry + WATER_TOP, z, 0.0F, material.still, material.waterColor, light(region, pos), 255);
+    }
+
+    private static void floorBlock(AddSectionGeometryEvent.SectionRenderingContext context, BlockAndTintGetter region, BlockPos pos,
+                                   BlockPos.MutableBlockPos side, boolean exposed, int x, int z, int ry, Material material) {
+        VertexConsumer buffer = context.getOrCreateChunkBuffer(RenderType.solid());
+        for (Direction dir : DIRECTIONS) {
+            if (dir == Direction.UP && !exposed) continue;
+            side.setWithOffset(pos, dir);
+            boolean hiddenByReal = dir != Direction.UP && region.getBlockState(side).isSolidRender(region, side);
+            if (dir == Direction.DOWN && hiddenByReal) continue;
+            face(buffer, region, dir, x, ry, z, 1.0F, material.solid, 0xFFFFFF, light(region, dir == Direction.UP ? side : pos),
+                    hiddenByReal ? 0 : 255);
         }
     }
 

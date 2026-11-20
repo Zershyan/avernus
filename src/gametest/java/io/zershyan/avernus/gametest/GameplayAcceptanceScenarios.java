@@ -4,10 +4,12 @@ import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.api.AvernusApi;
 import io.zershyan.avernus.compat.AvernusCompatFactory;
 import io.zershyan.avernus.realm.RealmManager;
-import io.zershyan.avernus.registry.AvernusDataComponents;
+import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
-import io.zershyan.avernus.registry.data_component.MirrorForm;
+import io.zershyan.avernus.api.realm.MirrorForm;
+import io.zershyan.avernus.api.realm.RealmResult;
+import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
@@ -16,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.SmithingMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingInput;
@@ -24,6 +27,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
@@ -41,7 +45,7 @@ public final class GameplayAcceptanceScenarios {
         var walker = helper.spawnWithNoFreeWill(EntityType.PIG, new Vec3(6.5, 2.0, 6.5));
         var level = helper.getLevel();
         var form = new MirrorForm(AvernusRealmAspects.UMBRAL.getId(), List.of());
-        helper.assertTrue(RealmManager.open(owner, form) == RealmManager.Result.OPENED, "测试领域应开启");
+        helper.assertTrue(RealmManager.open(owner, form) == RealmResult.OPENED, "测试领域应开启");
         var realm = Objects.requireNonNull(RealmManager.find(level.getServer(), owner.getUUID()));
         BlockPos target = helper.absolutePos(new BlockPos(6, 2, 10));
         helper.startSequence().thenWaitUntil(() -> helper.assertTrue(realm.covers(target.getX(), target.getZ(), level.getGameTime()), "目标列须已覆盖"))
@@ -62,25 +66,25 @@ public final class GameplayAcceptanceScenarios {
         var level = helper.getLevel();
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var smith = new SmithingMenu(1, player.getInventory());
-        var empty = new ItemStack(AvernusApi.mirrorItem());
+        var empty = new ItemStack(AvernusItems.UMBRAL_MIRROR.get());
         var name = Component.literal("复审镜");
         empty.set(DataComponents.CUSTOM_NAME, name);
         helper.assertTrue(smith.getSlot(0).mayPlace(new ItemStack(Items.FEATHER)) && smith.getSlot(1).mayPlace(empty), "应能放入羽毛和镜子");
         player.getInventory().setItem(0, empty);
-        player.getInventory().setItem(1, new ItemStack(Items.HEART_OF_THE_SEA, 2));
+        player.getInventory().setItem(1, new ItemStack(sigil(AvernusRealmTraits.WEAK_WATER), 2));
         helper.assertTrue(!smith.quickMoveStack(player, 31).isEmpty() && !smith.quickMoveStack(player, 32).isEmpty(), "快捷移入失败");
         var weakWater = AvernusRealmTraits.WEAK_WATER.getId();
         var output = smith.quickMoveStack(player, smith.getResultSlot());
-        helper.assertTrue(AvernusApi.isMirror(output) && AvernusApi.formOf(output).hasTrait(weakWater) && output.getHoverName().equals(name), "模板留空应添加弱水并保留名字");
+        helper.assertTrue(AvernusApi.isMirror(output) && hasTrait(output, weakWater) && output.getHoverName().equals(name), "模板留空应添加弱水并保留名字");
         helper.assertTrue(smith.getSlot(2).getItem().getCount() == 1 && !smith.getSlot(1).hasItem(), "快捷取出时只消耗一份材料和输入镜");
         smith.getSlot(1).set(output.copy());
         helper.assertFalse(smith.getSlot(3).hasItem(), "重复添加弱水不得有结果");
-        smith.getSlot(2).set(new ItemStack(Items.NETHERITE_INGOT));
+        smith.getSlot(2).set(new ItemStack(sigil(AvernusRealmTraits.BOUNDLESS)));
         helper.assertFalse(smith.getSlot(3).hasItem(), "弱水和无垠不能共存");
-        smith.getSlot(2).set(new ItemStack(Items.HEART_OF_THE_SEA));
+        smith.getSlot(2).set(new ItemStack(sigil(AvernusRealmTraits.WEAK_WATER)));
         smith.getSlot(0).set(new ItemStack(Items.FEATHER));
         var stripped = smith.quickMoveStack(player, 3);
-        helper.assertTrue(AvernusApi.isMirror(stripped) && !AvernusApi.formOf(stripped).hasTrait(weakWater)
+        helper.assertTrue(AvernusApi.isMirror(stripped) && !hasTrait(stripped, weakWater)
                 && stripped.getHoverName().equals(name), "添加羽毛应移除弱水并保留名字");
         helper.assertTrue(!smith.getSlot(0).hasItem() && !smith.getSlot(1).hasItem() && !smith.getSlot(2).hasItem(), "拆除必须消耗三种输入");
         List<ItemStack> grid = new ArrayList<>();
@@ -88,15 +92,14 @@ public final class GameplayAcceptanceScenarios {
         var input = CraftingInput.of(3, 3, grid);
         var recipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, level).orElseThrow();
         var infernal = recipe.value().assemble(input, level.registryAccess());
-        helper.assertTrue(AvernusApi.formOf(infernal).aspect().equals(AvernusRealmAspects.INFERNAL.getId())
-                && AvernusApi.formOf(infernal).hasTrait(weakWater) && infernal.getHoverName().equals(name), "工作台只改境相");
+        helper.assertTrue(infernal.is(AvernusItems.INFERNAL_MIRROR.get()) && hasTrait(infernal, weakWater) && infernal.getHoverName().equals(name), "工作台只改境相");
         helper.succeed();
     }
 
     @GameTest(template = "empty", batch = "re_audit_curios_body", timeoutTicks = 250)
     public static void optionalCuriosFindsOnlyWornChestMirror(GameTestHelper helper) {
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
-        var mirror = new ItemStack(AvernusApi.mirrorItem());
+        var mirror = new ItemStack(AvernusItems.UMBRAL_MIRROR.get());
         player.getInventory().setItem(0, mirror);
         if (!AvernusCompatFactory.CURIOS.isModLoaded()) {
             helper.assertTrue(AvernusCompatFactory.CURIOS.findWornMirror(player).isEmpty(), "未装 Curios 时只降级为空");
@@ -106,10 +109,17 @@ public final class GameplayAcceptanceScenarios {
         CuriosFixture.verify(helper, player, mirror);
     }
 
+    private static Item sigil(DeferredHolder<RealmTrait, RealmTrait> trait) {
+        return AvernusItems.SIGILS.get(trait).get();
+    }
+
+    private static boolean hasTrait(ItemStack stack, ResourceLocation trait) {
+        return AvernusApi.formOf(stack).map(form -> form.hasTrait(trait)).orElse(false);
+    }
+
     private static final class CuriosFixture {
         static void verify(GameTestHelper helper, net.minecraft.world.entity.player.Player player, ItemStack mirror) {
-            var stack = mirror.copy();
-            stack.set(AvernusDataComponents.MIRROR_FORM.get(), new MirrorForm(AvernusRealmAspects.SILENT.getId(), List.of()));
+            var stack = new ItemStack(AvernusItems.SILENT_MIRROR.get());
             var inventory = top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).orElseThrow();
             var body = inventory.getStacksHandler("body").orElseThrow();
             helper.assertTrue(body.getStacks().getSlots() > 0 && body.getStacks().isItemValid(0, stack), "数据生成的标签和槽允许佩戴镜子");
@@ -130,7 +140,7 @@ public final class GameplayAcceptanceScenarios {
                 head.getStacks().setStackInSlot(0, mirror.copy());
                 helper.runAfterDelay(2, () -> {
                     var found = AvernusCompatFactory.CURIOS.findWornMirror(player);
-                    helper.assertTrue(found.isEmpty(), "仅头饰佩戴镜子却被胸饰查找返回：" + AvernusApi.formOf(found).aspect());
+                    helper.assertTrue(found.isEmpty(), "仅头饰佩戴镜子却被胸饰查找返回：" + found);
                     helper.succeed();
                 });
             });

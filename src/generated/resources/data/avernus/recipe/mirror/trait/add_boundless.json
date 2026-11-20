@@ -1,7 +1,7 @@
 {
   "type": "avernus:mirror_trait",
   "material": {
-    "item": "minecraft:netherite_ingot"
+    "item": "avernus:boundless_sigil"
   },
   "trait": "avernus:boundless"
 }

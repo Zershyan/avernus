@@ -13,6 +13,11 @@ public record RealmMeshKey(int layerY, boolean weakWater, boolean boundless, Rea
                 realm.hasTrait(AvernusRealmTraits.BOUNDLESS.get()), realm.aspect());
     }
 
+    /** 境面层下方遮住地下的底板层。 */
+    public int floorY() {
+        return layerY - 1;
+    }
+
     public RealmTerrain.Kind kind(BlockState real) {
         return RealmTerrain.classify(layerY + 1, weakWater, boundless, real, layerY);
     }

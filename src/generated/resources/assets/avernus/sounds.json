@@ -1,0 +1,51 @@
+{
+  "realm.contract": {
+    "sounds": [
+      {
+        "type": "event",
+        "name": "block.beacon.deactivate",
+        "pitch": 0.6
+      }
+    ],
+    "subtitle": "subtitles.avernus.realm.contract"
+  },
+  "realm.expand": {
+    "sounds": [
+      {
+        "type": "event",
+        "name": "block.beacon.activate",
+        "pitch": 0.6
+      }
+    ],
+    "subtitle": "subtitles.avernus.realm.expand"
+  },
+  "realm.mirror_return": {
+    "sounds": [
+      {
+        "type": "event",
+        "name": "item.trident.return"
+      }
+    ],
+    "subtitle": "subtitles.avernus.realm.mirror_return"
+  },
+  "realm.mirror_throw": {
+    "sounds": [
+      {
+        "type": "event",
+        "name": "item.trident.throw",
+        "pitch": 1.2
+      }
+    ],
+    "subtitle": "subtitles.avernus.realm.mirror_throw"
+  },
+  "realm.shatter": {
+    "sounds": [
+      {
+        "type": "event",
+        "name": "block.glass.break",
+        "pitch": 0.6
+      }
+    ],
+    "subtitle": "subtitles.avernus.realm.shatter"
+  }
+}

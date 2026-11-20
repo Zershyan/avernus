@@ -1,7 +1,7 @@
 {
   "type": "avernus:mirror_trait",
   "material": {
-    "item": "minecraft:nether_star"
+    "item": "avernus:eternity_sigil"
   },
   "trait": "avernus:eternity"
 }

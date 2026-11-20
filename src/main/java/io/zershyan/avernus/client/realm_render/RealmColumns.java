@@ -86,7 +86,7 @@ final class RealmColumns {
 
         Map<Long, List<Slice>> slices = new HashMap<>();
         for (Candidate candidate : candidates) addSlices(slices, candidate);
-        Set<Long> changed = new HashSet<>();
+        Set<Long> boundaryUpdates = new HashSet<>();
         int previous = GlStateManager._getInteger(GL_TEXTURE_BINDING_2D);
         RenderSystem.bindTexture(texture);
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -98,7 +98,7 @@ final class RealmColumns {
                 iterator.remove();
                 abyss.remove(pos);
                 upload(pos, EMPTY, pixels);
-                changed.add(pos);
+                addBoundaryUpdates(boundaryUpdates, pos);
             }
             for (var entry : slices.entrySet()) {
                 long pos = entry.getKey();
@@ -109,24 +109,28 @@ final class RealmColumns {
                 tiles.put(pos, tile);
                 if (old == null || !Arrays.equals(old.data, tile.data)) {
                     upload(pos, tile.data, pixels);
-                    changed.add(pos);
+                    addBoundaryUpdates(boundaryUpdates, pos);
                 }
             }
         } finally {
             RenderSystem.bindTexture(previous);
         }
         dirty.clear();
-        for (long pos : changed) {
-            int x = ChunkPos.getX(pos), z = ChunkPos.getZ(pos);
-            updateBoundary(x, z, level);
-            updateBoundary(x - 1, z, level);
-            updateBoundary(x + 1, z, level);
-            updateBoundary(x, z - 1, level);
-            updateBoundary(x, z + 1, level);
+        for (long chunk : boundaryUpdates) {
+            updateBoundary(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), level);
         }
         Set<RealmMeshKey> current = new HashSet<>();
         candidates.forEach(candidate -> current.add(candidate.style.key));
         styles.keySet().retainAll(current);
+    }
+
+    private static void addBoundaryUpdates(Set<Long> chunks, long changed) {
+        int x = ChunkPos.getX(changed), z = ChunkPos.getZ(changed);
+        chunks.add(changed);
+        chunks.add(ChunkPos.asLong(x - 1, z));
+        chunks.add(ChunkPos.asLong(x + 1, z));
+        chunks.add(ChunkPos.asLong(x, z - 1));
+        chunks.add(ChunkPos.asLong(x, z + 1));
     }
 
     private void addSlices(Map<Long, List<Slice>> tilesByPosition, Candidate candidate) {
@@ -150,7 +154,7 @@ final class RealmColumns {
     private Tile resolve(ClientLevel level, long packed, List<Slice> slices) {
         int baseX = ChunkPos.getX(packed) * SIZE;
         int baseZ = ChunkPos.getZ(packed) * SIZE;
-        Map<Integer, BitSetDiscreteVoxelShape> weakWater = new HashMap<>();
+        Map<Integer, BitSetDiscreteVoxelShape> weakWater = null;
         int[] data = new int[TILE_INTS];
         int minLayer = NO_CUT;
         Set<Style> styles = new HashSet<>();
@@ -163,6 +167,7 @@ final class RealmColumns {
                     int y = style.key.layerY();
                     int i = index(x, z);
                     if (style.key.weakWater()) {
+                        if (weakWater == null) weakWater = new HashMap<>();
                         weakWater.computeIfAbsent(y, h -> new BitSetDiscreteVoxelShape(SIZE, 1, SIZE)).fill(x, 0, z);
                         data[i + 3] = 1;
                     }
@@ -173,13 +178,14 @@ final class RealmColumns {
                         case WATER -> WATER;
                         default -> 0;
                     };
-                    minLayer = Math.min(minLayer, y);
+                    minLayer = Math.min(minLayer, y - 1);
                     styles.add(style);
                     break;
                 }
             }
         }
-        abyss.replace(packed, weakWater);
+        if (weakWater == null) abyss.remove(packed);
+        else abyss.replace(packed, weakWater);
         return new Tile(slices, data, styles, minLayer);
     }
 
@@ -200,10 +206,6 @@ final class RealmColumns {
                         min = Math.min(min, low);
                         max = Math.max(max, high == NO_CUT ? level.getMaxBuildHeight() - 1 : high - 1);
                     }
-                    if (high != NO_CUT && own.data[index(x, z) + 2] != SOLID) {
-                        min = Math.min(min, high - 1);
-                        max = Math.max(max, high - 1);
-                    }
                 }
             }
         }
@@ -211,9 +213,10 @@ final class RealmColumns {
         else boundaries.put(key, new Range(min, max));
     }
 
+    /** 该列真实方块开始隐藏的高度：境面层下方的底板层。 */
     private static int cut(@Nullable Tile tile, int x, int z) {
         int i = index(x, z);
-        return tile == null || tile.data[i + 1] == 0 ? NO_CUT : tile.data[i];
+        return tile == null || tile.data[i + 1] == 0 ? NO_CUT : tile.data[i] - 1;
     }
 
     private static int index(int x, int z) {
@@ -224,7 +227,7 @@ final class RealmColumns {
         Tile tile = tiles.get(ChunkPos.asLong(pos));
         if (tile == null) return false;
         int i = index(pos.getX(), pos.getZ());
-        return tile.data[i + 1] != 0 && (tile.data[i + 3] != 0 || pos.getY() >= tile.data[i]);
+        return tile.data[i + 1] != 0 && (tile.data[i + 3] != 0 || pos.getY() >= tile.data[i] - 1);
     }
 
     @Nullable Range boundary(long chunk) {

@@ -6,7 +6,6 @@ import io.zershyan.avernus.registry.AvernusConfigs;
 import io.zershyan.avernus.registry.AvernusDataComponents;
 import io.zershyan.avernus.registry.AvernusEntities;
 import io.zershyan.avernus.registry.AvernusEvents;
-import io.zershyan.avernus.registry.AvernusItemModels;
 import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.AvernusKeyMappings;
 import io.zershyan.avernus.registry.AvernusPackets;
@@ -16,6 +15,7 @@ import io.zershyan.avernus.registry.AvernusRealmTraits;
 import io.zershyan.avernus.registry.AvernusRecipes;
 import io.zershyan.avernus.registry.AvernusRegistries;
 import io.zershyan.avernus.registry.AvernusShaders;
+import io.zershyan.avernus.registry.AvernusSounds;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -38,6 +38,7 @@ public class Avernus {
         AvernusAttachments.doRegister(modEventBus);
         AvernusItems.doRegister(modEventBus);
         AvernusParticles.doRegister(modEventBus);
+        AvernusSounds.doRegister(modEventBus);
         AvernusEntities.doRegister(modEventBus, dist);
         AvernusRecipes.doRegister(modEventBus);
         AvernusPackets.doRegister(modEventBus);
@@ -46,7 +47,6 @@ public class Avernus {
         AvernusCompatFactory.doRegister(modEventBus);
 
         if (dist.isClient()) {
-            AvernusItemModels.doRegister(modEventBus);
             AvernusShaders.doRegister(modEventBus);
             AvernusKeyMappings.doRegister(modEventBus);
         }

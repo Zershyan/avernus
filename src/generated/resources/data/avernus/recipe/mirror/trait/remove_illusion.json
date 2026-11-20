@@ -1,7 +1,7 @@
 {
   "type": "avernus:mirror_trait",
   "material": {
-    "item": "minecraft:ghast_tear"
+    "item": "avernus:illusion_sigil"
   },
   "remove": true,
   "trait": "avernus:illusion"

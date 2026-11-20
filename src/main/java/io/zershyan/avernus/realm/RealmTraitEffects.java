@@ -1,10 +1,13 @@
 package io.zershyan.avernus.realm;
 
+import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
 import io.zershyan.avernus.registry.attachment.IllusionPermits;
 import io.zershyan.avernus.registry.config.ServerConfig;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -13,6 +16,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
@@ -20,7 +25,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.EffectCures;
+import net.neoforged.neoforge.common.NeoForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -40,6 +47,55 @@ public final class RealmTraitEffects {
         Realm realm = set.effectAt(entity.getBlockX(), entity.getBlockZ(), level.getGameTime());
         return realm != null && realm.hasTrait(trait) ? realm : null;
     }
+
+    /** 带特定类型的领域每 tick 的服务端效果。 */
+    public static void tick(ServerLevel level, Realm realm) {
+        if (realm.hasTrait(AvernusRealmTraits.EQUALITY.get()) && level.getGameTime() % EQUALITY_INTERVAL == 0) liftBelowSurface(level, realm);
+        if (realm.hasTrait(AvernusRealmTraits.FREEDOM.get())) updateFreedom(level, realm, !realm.isClosing(level.getGameTime()));
+    }
+
+    /** 领域结束时撤销持续效果。 */
+    public static void release(ServerLevel level, Realm realm) {
+        if (realm.hasTrait(AvernusRealmTraits.FREEDOM.get())) updateFreedom(level, realm, false);
+    }
+
+    // region 平等
+
+    private static final int EQUALITY_INTERVAL = 10;
+
+    /** 把境面以下、已被覆盖列中的生物带到该列境面之上：实心处站在境面上，空洞与水面处落在一格深的坑底。 */
+    private static void liftBelowSurface(ServerLevel level, Realm realm) {
+        int radius = realm.radius();
+        AABB area = new AABB(realm.exactCenterX() - radius, level.getMinBuildHeight(), realm.exactCenterZ() - radius,
+                realm.exactCenterX() + radius, realm.height() - 1, realm.exactCenterZ() + radius);
+        long time = level.getGameTime();
+        for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, area, entity -> realm.belowSurface(entity)
+                && realm.reaches(entity) && realm.covers(entity.getBlockX(), entity.getBlockZ(), time))) {
+            BlockPos surface = BlockPos.containing(entity.getX(), realm.height() - 1, entity.getZ());
+            boolean solid = RealmTerrain.classify(realm, level.getBlockState(surface), surface.getY()) == RealmTerrain.Kind.SOLID;
+            entity.resetFallDistance();
+            entity.teleportTo(entity.getX(), solid ? realm.height() : realm.height() - 1, entity.getZ());
+        }
+    }
+
+    // endregion
+
+    // region 自由
+
+    private static final ResourceLocation FREEDOM_MODIFIER = Avernus.id("freedom");
+
+    /** 开境者站在自己领域生效的列上时获得飞行能力，离开或领域收起时撤销。 */
+    private static void updateFreedom(ServerLevel level, Realm realm, boolean active) {
+        if (!(level.getEntity(realm.ownerId()) instanceof Player owner)) return;
+        AttributeInstance flight = owner.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
+        if (flight == null) return;
+        boolean grant = active && realm.covers(owner.getBlockX(), owner.getBlockZ(), level.getGameTime());
+        if (grant == flight.hasModifier(FREEDOM_MODIFIER)) return;
+        if (grant) flight.addTransientModifier(new AttributeModifier(FREEDOM_MODIFIER, 1.0, AttributeModifier.Operation.ADD_VALUE));
+        else flight.removeModifier(FREEDOM_MODIFIER);
+    }
+
+    // endregion
 
     // region 湮没
 

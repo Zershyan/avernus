@@ -1,7 +1,7 @@
 {
   "type": "avernus:mirror_trait",
   "material": {
-    "item": "minecraft:totem_of_undying"
+    "item": "avernus:rebirth_sigil"
   },
   "trait": "avernus:rebirth"
 }

@@ -6,7 +6,8 @@ import io.zershyan.avernus.realm.RealmManager;
 import io.zershyan.avernus.realm.RealmSets;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
-import io.zershyan.avernus.registry.data_component.MirrorForm;
+import io.zershyan.avernus.api.realm.MirrorForm;
+import io.zershyan.avernus.api.realm.RealmResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -202,7 +203,7 @@ public final class RealmGameTests {
         helper.startSequence().thenWaitUntil(() -> assertCovered(helper, realm, 7, 8, 7, 9))
                 .thenExecute(() -> {
                     try {
-                        helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onPlaceItemIntoWorld(use) == net.minecraft.world.InteractionResult.FAIL, "床头替换受保护草时整笔放置须失败");
+                        helper.assertFalse(net.neoforged.neoforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "领域内如冒险模式，床不得放置");
                         helper.assertTrue(level.isEmptyBlock(first) && level.getBlockState(second).is(Blocks.SHORT_GRASS), "床尾应回滚，草不应被替换");
                         helper.assertTrue(bed.getCount() == 2, "失败不能消耗物品");
                     } finally {
@@ -280,7 +281,7 @@ public final class RealmGameTests {
         var motion = new Realm.Motion(0, -1, original.x, original.z, original, original.y + 2, 0);
         var state = new Realm.Snapshot(java.util.UUID.randomUUID(), owner.getUUID(), owner.getId(), level.dimension(), form,
                 owner.getBlockY(), 4, Long.MAX_VALUE, now - timeline.shatterDelay() - timeline.waveTicks(), 42, timeline,
-                original, 0, 0, 0, 0, motion);
+                original, 0, 0, 0, motion);
         Realm realm = state.instantiate();
         if (realm == null) throw new AssertionError("测试境相无效");
         var realms = RealmSets.of(level);
@@ -293,8 +294,8 @@ public final class RealmGameTests {
             helper.assertTrue(realm.covers(boat.getBlockX(), boat.getBlockZ(), now), "车辆中心仍在同一个领域");
             helper.assertFalse(realm.covers(helper.absolutePos(new BlockPos(9, H, 8)).getX(), boat.getBlockZ(), now), "旁边墙列应已恢复");
             io.zershyan.avernus.realm.RealmPresenceTracker.tick(boat);
-            helper.assertTrue(Math.abs(boat.getY() - (feet.y + 2)) < 1.0E-5 && boat.getX() == feet.x && boat.getZ() == feet.z,
-                    "车辆只沿 Y 轴恢复到能支撑完整碰撞箱的位置");
+            helper.assertTrue(Math.abs(boat.getY() - (feet.y + 2.1)) < 1.0E-5 && boat.getX() == feet.x && boat.getZ() == feet.z,
+                    "车辆只沿 Y 轴恢复到能支撑完整碰撞箱的位置，并略微抬高防止再次卡入");
         } finally {
             realms.remove(realm.id());
         }
@@ -453,7 +454,7 @@ public final class RealmGameTests {
 
     private static Realm openFor(GameTestHelper helper, net.minecraft.world.entity.LivingEntity owner, ResourceLocation... traits) {
         MirrorForm form = new MirrorForm(AvernusRealmAspects.UMBRAL.getId(), List.of(traits));
-        helper.assertTrue(RealmManager.open(owner, form) == RealmManager.Result.OPENED, "开境失败");
+        helper.assertTrue(RealmManager.open(owner, form) == RealmResult.OPENED, "开境失败");
         return java.util.Objects.requireNonNull(RealmManager.find(helper.getLevel().getServer(), owner.getUUID()));
     }
 
@@ -472,7 +473,7 @@ public final class RealmGameTests {
         }
         ArmorStand owner = helper.spawn(EntityType.ARMOR_STAND, new Vec3(6.5, H, 2.5));
         MirrorForm form = new MirrorForm(AvernusRealmAspects.UMBRAL.getId(), List.of(traits));
-        helper.assertTrue(RealmManager.open(owner, form) == RealmManager.Result.OPENED, "开境失败");
+        helper.assertTrue(RealmManager.open(owner, form) == RealmResult.OPENED, "开境失败");
         return RealmManager.find(helper.getLevel().getServer(), owner.getUUID());
     }
 

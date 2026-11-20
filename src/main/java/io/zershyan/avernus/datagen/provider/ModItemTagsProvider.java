@@ -26,6 +26,7 @@ public class ModItemTagsProvider extends ItemTagsProvider {
 
     @Override
     protected void addTags(HolderLookup.@NotNull Provider provider) {
-        tag(CURIOS_BODY).add(AvernusItems.MIRROR.get());
+        AvernusItems.MIRRORS_BY_ASPECT.values().forEach(mirror -> tag(AvernusItems.MIRRORS).add(mirror.get()));
+        tag(CURIOS_BODY).addTag(AvernusItems.MIRRORS);
     }
 }

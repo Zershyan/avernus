@@ -1,14 +1,13 @@
 package io.zershyan.avernus.api.realm;
 
-import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
-import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
-/** 领域的只读视图；坐标均为方块坐标。 */
+/** 领域的只读视图；坐标均为方块坐标，境相和类型只暴露稳定资源 ID。 */
 public interface RealmView {
     UUID id();
 
@@ -16,15 +15,16 @@ public interface RealmView {
 
     ResourceKey<Level> dimension();
 
-    RealmAspect aspect();
+    ResourceLocation aspectId();
 
-    Set<RealmTrait> traits();
+    /** 去重排序的不可修改类型 ID 列表。 */
+    List<ResourceLocation> traitIds();
 
-    default boolean hasTrait(RealmTrait trait) {
-        return traits().contains(trait);
+    default boolean hasTrait(ResourceLocation trait) {
+        return traitIds().contains(trait);
     }
 
-    /** 开境时使用者脚部所在方块高度；该高度及以上的方块被消隐。 */
+    /** 开境时使用者脚部所在的方块高度。 */
     int height();
 
     int radius();

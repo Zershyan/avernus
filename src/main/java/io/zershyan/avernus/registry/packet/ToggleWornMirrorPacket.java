@@ -1,9 +1,8 @@
 package io.zershyan.avernus.registry.packet;
 
 import io.zershyan.avernus.Avernus;
+import io.zershyan.avernus.api.AvernusApi;
 import io.zershyan.avernus.compat.AvernusCompatFactory;
-import io.zershyan.avernus.realm.RealmManager;
-import io.zershyan.avernus.registry.item.MirrorItem;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -36,7 +35,7 @@ public record ToggleWornMirrorPacket() implements CustomPacketPayload {
             Long last = LAST_REQUEST.put(player.getUUID(), now);
             if (last != null && now - last < MIN_INTERVAL && now >= last) return;
             ItemStack mirror = AvernusCompatFactory.CURIOS.findWornMirror(player);
-            if (!mirror.isEmpty()) RealmManager.toggle(player, MirrorItem.getForm(mirror));
+            AvernusApi.formOf(mirror).ifPresent(form -> AvernusApi.toggle(player, form));
         });
     }
 

@@ -17,6 +17,10 @@ import java.util.UUID;
 
 /** 客户端镜子位置：开境者胸口与永恒镜片云的平滑锚点。 */
 public final class MirrorAnchors {
+    /** 每 tick 追赶剩余距离的比例：近处只有底数，远处按距离平方迅速增大，像一根超长的弹性绳。 */
+    private static final double FOLLOW_BASE = 0.04;
+    private static final double FOLLOW_STRETCH = 0.006;
+
     /** 永恒镜片云的阻尼锚点：离目标越远追赶越快，无速度项因此不会振荡。 */
     private static final class Anchor {
         Vec3 previous;
@@ -36,7 +40,7 @@ public final class MirrorAnchors {
             }
             previous = current;
             Vec3 delta = target.subtract(current);
-            current = current.add(delta.scale(Math.min(1.0, 0.2 + delta.length() * 0.08)));
+            current = current.add(delta.scale(Math.min(1.0, FOLLOW_BASE + FOLLOW_STRETCH * delta.lengthSqr())));
         }
 
         Vec3 at(float partialTick) {

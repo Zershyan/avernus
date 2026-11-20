@@ -3,6 +3,7 @@ package io.zershyan.avernus.registry.realm_aspect.builder;
 import io.zershyan.avernus.api.realm.RealmView;
 import io.zershyan.avernus.registry.AvernusRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,6 +32,16 @@ public class RealmAspect {
     public Component getName() {
         ResourceLocation id = getId();
         return id == null ? Component.empty() : Component.translatable(languageKey(id));
+    }
+
+    /** 一句话说明，语言键为名称键加 {@code .desc}。 */
+    public MutableComponent getDescription() {
+        ResourceLocation id = getId();
+        return id == null ? Component.empty() : Component.translatable(descriptionKey(id));
+    }
+
+    public static String descriptionKey(ResourceLocation id) {
+        return languageKey(id) + ".desc";
     }
 
     public static String languageKey(ResourceLocation id) {

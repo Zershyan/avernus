@@ -21,6 +21,8 @@ import java.util.UUID;
 public final class RealmPresenceTracker {
     private static final double SUPPORT_PROBE = 0.05;
     private static final double EPSILON = 1.0E-7;
+    /** 脱出方块时额外抬高的距离，避免贴着方块顶面落位而再次卡入。 */
+    private static final double ESCAPE_LIFT = 0.1;
 
     private RealmPresenceTracker() {
     }
@@ -37,18 +39,25 @@ public final class RealmPresenceTracker {
         UUID realm = geometry.realmId();
         boolean guard = old.fallGuard();
         boolean entered = entity instanceof LivingEntity && realm != null && !realm.equals(old.realm());
+        boolean released = entity instanceof LivingEntity && realm == null && old.realm() != null && closing(realms, old.realm(), level.getGameTime());
         if (geometry.signature() != old.checkedGeometry() || pending && !affected) escapeIfEmbedded(level, entity);
         if (entity.isInWater()) guard = false;
-        else if (entered || guard && entity.onGround()) {
+        else if (entered || released || guard && entity.onGround()) {
             boolean supported = !level.noBlockCollision(entity, entity.getBoundingBox().move(0.0, -SUPPORT_PROBE, 0.0));
             if (supported && entity.onGround()) guard = false;
-            else if (entered && !supported) guard = true;
+            else if ((entered || released) && !supported) guard = true;
         }
         store(entity, old, new RealmPresence(realm, guard, geometry.signature()));
         if (affected != pending) {
             if (affected) entity.setData(AvernusAttachments.PENDING_RECOVERY, true);
             else entity.removeData(AvernusAttachments.PENDING_RECOVERY);
         }
+    }
+
+    /** 实体所在的领域正在收起或已移除：收境把实体放回真实地形，与开境一样免疫随之而来的摔落。 */
+    private static boolean closing(RealmSet realms, UUID id, long gameTime) {
+        Realm realm = realms.get(id);
+        return realm == null || realm.isClosing(gameTime);
     }
 
     /** 包含服务端玩家移动包：它最终调用 Entity 的实现，而不是 ServerPlayer 的空覆写。 */
@@ -134,7 +143,7 @@ public final class RealmPresenceTracker {
             double down = Shapes.collide(Direction.Axis.Y, candidate,
                     level.getBlockCollisions(entity, candidate.expandTowards(0.0, -1.0, 0.0)), -1.0);
             if (down > -1.0 + EPSILON && y + down >= start) {
-                restore(entity, y + down);
+                restore(entity, lifted(level, entity, box, start, y + down));
                 return;
             }
         }
@@ -146,7 +155,12 @@ public final class RealmPresenceTracker {
         }
         double y = Math.max(start, top);
         if (!level.noBlockCollision(entity, box.move(0.0, y - start, 0.0))) y = Math.max(y, level.getMaxBuildHeight());
-        restore(entity, y);
+        restore(entity, lifted(level, entity, box, start, y));
+    }
+
+    /** 落位稍微抬高，避免贴着方块顶面而再次卡入；抬高后会碰到上方方块时保持原位。 */
+    private static double lifted(ServerLevel level, Entity entity, AABB box, double start, double y) {
+        return level.noBlockCollision(entity, box.move(0.0, y + ESCAPE_LIFT - start, 0.0)) ? y + ESCAPE_LIFT : y;
     }
 
     private static boolean waterAt(ServerLevel level, Entity entity, BlockPos pos) {

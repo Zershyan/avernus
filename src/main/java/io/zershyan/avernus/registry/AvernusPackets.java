@@ -1,17 +1,23 @@
 package io.zershyan.avernus.registry;
 
+import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.registry.packet.RealmMotionPacket;
 import io.zershyan.avernus.registry.packet.RealmRemovePacket;
 import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
 import io.zershyan.avernus.registry.packet.RealmUpdatePacket;
 import io.zershyan.avernus.registry.packet.ToggleWornMirrorPacket;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class AvernusPackets {
-    /** 协议版本独立固定，字段变化时手动升级。 */
-    private static final String PROTOCOL_VERSION = "2";
+    /** 使用完整模组版本协商网络兼容性；版本不一致时拒绝连接。 */
+    private static final String PROTOCOL_VERSION = ModList.get()
+            .getModContainerById(Avernus.MODID)
+            .map(container -> container.getModInfo().getVersion())
+            .map(Object::toString)
+            .orElse("unknown");
 
     private static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);

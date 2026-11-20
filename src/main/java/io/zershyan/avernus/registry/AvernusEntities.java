@@ -2,6 +2,7 @@ package io.zershyan.avernus.registry;
 
 import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.client.mirror.MirrorEntityRenderer;
+import io.zershyan.avernus.client.mirror.MirrorItemRenderer;
 import io.zershyan.avernus.registry.entity.MirrorEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -29,6 +30,7 @@ public class AvernusEntities {
         static void register(IEventBus modBus) {
             modBus.addListener(EntityRenderersEvent.RegisterRenderers.class,
                     event -> event.registerEntityRenderer(MIRROR.get(), MirrorEntityRenderer::new));
+            modBus.addListener(MirrorItemRenderer::register);
         }
     }
 }
