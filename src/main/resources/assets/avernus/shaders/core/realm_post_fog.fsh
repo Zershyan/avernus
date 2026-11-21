@@ -39,19 +39,30 @@ float fog_scale() {
     return Atmosphere == 1 ? 9.0 : Atmosphere == 2 ? 16.0 : 5.0;
 }
 
+// 风格雾噪声的各向频率（格⁻¹）。
+vec3 style_frequency() {
+    return Atmosphere == 1 ? vec3(0.13, 0.18, 0.13) : Atmosphere == 2 ? vec3(0.08, 0.45, 0.08) : vec3(0.14, 0.22, 0.14);
+}
+
 // 风格雾密度 0..1，p 为世界坐标（已取模）。
 float style_density(vec3 p, int octaves) {
+    vec3 q = p * style_frequency();
     if (Atmosphere == 1) {
         // 炼狱：翻滚上升的烟团
-        return smoothstep(0.5, 0.8, realm_fbm3(NoiseSampler, p * vec3(0.13, 0.18, 0.13) + vec3(0.0, -Time * 0.45, Time * 0.06), octaves));
+        return smoothstep(0.5, 0.8, realm_fbm3(NoiseSampler, q + vec3(0.0, -Time * 0.45, Time * 0.06), octaves));
     }
     if (Atmosphere == 2) {
         // 寂静：水平薄片，竖直方向频率更高
-        return smoothstep(0.4, 0.68, realm_fbm3(NoiseSampler, p * vec3(0.08, 0.45, 0.08) + vec3(Time * 0.08, 0.0, Time * 0.03), octaves));
+        return smoothstep(0.4, 0.68, realm_fbm3(NoiseSampler, q + vec3(Time * 0.08, 0.0, Time * 0.03), octaves));
     }
     // 幽冥：脊状丝缕，缓慢旋绕
-    float n = realm_fbm3(NoiseSampler, p * vec3(0.14, 0.22, 0.14) + vec3(Time * 0.1, Time * 0.05, -Time * 0.08), octaves);
+    float n = realm_fbm3(NoiseSampler, q + vec3(Time * 0.1, Time * 0.05, -Time * 0.08), octaves);
     return pow(1.0 - abs(2.0 * n - 1.0), 5.0);
+}
+
+// 风格雾密度的空间均值。
+float style_mean() {
+    return Atmosphere == 1 ? 0.06 : Atmosphere == 2 ? 0.25 : 0.44;
 }
 
 // 体积雾：只在雾层（离地 3 倍厚度以内）里步进，步点向相机加密；步进段以外用解析高度雾补足远处。
@@ -65,23 +76,26 @@ vec4 volumetric(vec3 dir, float limit) {
     if (top < 0.0) enter = dir.y < -1.0e-4 ? top / dir.y : exit;
     else if (dir.y > 1.0e-4) exit = min(exit, top / dir.y);
     int octaves = Quality >= 4 ? 4 : 3;
-    // 无结构哈希抖动：IGN 的斜向规律在掠射的远处地面会放大成条纹
-    float jitter = realm_hash(gl_FragCoord.xy);
     vec3 baseColor = mix(FogTint * 1.3, Glow * 0.6, Atmosphere == 2 ? 0.1 : 0.15);
+    float rayFrequency = length(style_frequency() * dir);
+    float mean = style_mean();
     vec3 scatter = vec3(0.0);
     float transmit = 1.0;
     float span = exit - enter;
     float prev = enter;
     for (int i = 0; i < 16; i++) {
         if (i >= FogSteps || span <= 0.0) break;
-        float k = (float(i) + jitter) / float(FogSteps);
+        // 步点取段中点而不逐像素抖动：降分辨率下抖动无从平均，会在暗处显成满屏颗粒；远处的分层由下面的频带限制抹平
+        float k = (float(i) + 0.5) / float(FogSteps);
         float t = enter + span * k * k;
         float next = enter + span * (float(i + 1) / float(FogSteps)) * (float(i + 1) / float(FogSteps));
         float dt = next - prev;
         prev = next;
         vec3 p = dir * t;
         float h = p.y - SurfaceY;
-        float wisp = style_density(p + CameraPos, octaves);
+        // 一步跨过多个噪声周期时，逐点采样只是随机取值，会在掠射的远处变成满屏噪点；此时向均值收拢
+        float detail = clamp(0.5 / (dt * rayFrequency), 0.0, 1.0);
+        float wisp = detail > 0.05 ? mix(mean, style_density(p + CameraPos, octaves), detail) : mean;
         float density = rho * exp(-clamp(h / scale, -4.0, 30.0)) * ((Atmosphere == 1 ? 0.08 : 0.2) + 5.0 * wisp);
         // 絮团浓处更亮以显出体积，仍保持雾色；只有贴地一层被地面辉光微微映亮
         float ground = exp(-max(h, 0.0) / (Atmosphere == 1 ? 3.0 : 2.0));
