@@ -1,42 +1,24 @@
 package io.zershyan.avernus.client.realm_render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexBuffer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import io.zershyan.avernus.realm.Realm;
 import io.zershyan.avernus.realm.RealmSets;
 import io.zershyan.avernus.registry.entity.MirrorEntity;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.RenderSection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
-
-import static org.lwjgl.opengl.GL11.glDepthRange;
-import static org.lwjgl.opengl.GL11.glDisable;
-import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glIsEnabled;
-import static org.lwjgl.opengl.GL32.GL_DEPTH_CLAMP;
 
 /**
  * 摄像机身处领域已覆盖的范围时，境外一概不绘制：覆盖范围（圆柱与波面圆盘的交集）之外的分区、实体与方块实体被剔除，
- * 沿覆盖边界立一圈墙填补剔除留下的空洞；墙的深度压到最远处，后处理把它当作天空画上境相天空。展开与收缩时边界随波面移动。
+ * 边界分区内越界的地形由区块着色器逐像素裁掉，空出的部分保持天空深度，由后处理画成境相天空。展开与收缩时边界随波面移动。
  */
 public final class RealmEnclosure {
-    /** 墙面每段弧长（格）。 */
-    private static final double SEGMENT = 2.0;
-    /** 墙比覆盖边界略向外，避免与边缘列的境面重叠闪烁。 */
-    private static final double WALL_MARGIN = 0.5;
-
     private static @Nullable Realm enclosing;
     private static double wave;
 
@@ -106,56 +88,17 @@ public final class RealmEnclosure {
         return inside(Math.max(0.0, Math.max(x0 - cx, cx - x1)), Math.max(0.0, Math.max(z0 - cz, cz - z1)), radius);
     }
 
-    /** 从摄像机沿水平方向到圆的出射距离；摄像机在圆内，所以恒有正解。 */
-    private static double exit(double ox, double oz, double dx, double dz, double radius) {
-        double b = ox * dx + oz * dz;
-        return -b + Math.sqrt(Math.max(0.0, b * b - (ox * ox + oz * oz - radius * radius)));
-    }
-
-    /** 在实心方块之后绘制，深度恒为 1：只填补天空像素，不遮挡任何几何。 */
-    public static void render(RenderLevelStageEvent event) {
+    /** 区块着色器据此裁掉覆盖范围外的地形；外缘放宽一格，与实体剔除一致。 */
+    public static void setupShader(ShaderInstance shader, Vec3 camera) {
         Realm realm = enclosing;
-        var shader = GameRenderer.getPositionColorShader();
-        if (realm == null || shader == null) return;
-        var mc = Minecraft.getInstance();
-        Vec3 eye = event.getCamera().getPosition();
-        float bottom = (float) (realm.height() - 2 - eye.y);
-        float top = (float) (mc.level.getMaxBuildHeight() + 64 - eye.y);
-        double cylinderX = eye.x - realm.exactCenterX(), cylinderZ = eye.z - realm.exactCenterZ();
-        double waveX = eye.x - realm.sourceX(), waveZ = eye.z - realm.sourceZ();
-        double cylinder = realm.radius() + WALL_MARGIN, disc = wave + WALL_MARGIN;
-        int segments = Math.max(16, Mth.ceil(Mth.TWO_PI * Math.min(cylinder, disc) / SEGMENT));
-        // 覆盖范围是两圆之交，为凸集，从内部的摄像机按角度投射即得其边界
-        float[] xs = new float[segments + 1], zs = new float[segments + 1];
-        for (int i = 0; i <= segments; i++) {
-            double angle = Mth.TWO_PI * i / segments, dx = Math.cos(angle), dz = Math.sin(angle);
-            double reach = Math.min(exit(cylinderX, cylinderZ, dx, dz, cylinder), exit(waveX, waveZ, dx, dz, disc));
-            xs[i] = (float) (dx * reach);
-            zs[i] = (float) (dz * reach);
+        var cylinder = shader.safeGetUniform("RealmEncloseA");
+        var disc = shader.safeGetUniform("RealmEncloseB");
+        if (realm == null) {
+            cylinder.set(0.0F, 0.0F, -1.0F, 0.0F);
+            disc.set(0.0F, 0.0F, -1.0F, 0.0F);
+            return;
         }
-        var buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        for (int i = 0; i < segments; i++) {
-            buffer.addVertex(xs[i], bottom, zs[i]).setColor(0xFF000000);
-            buffer.addVertex(xs[i], top, zs[i]).setColor(0xFF000000);
-            buffer.addVertex(xs[i + 1], top, zs[i + 1]).setColor(0xFF000000);
-            buffer.addVertex(xs[i + 1], bottom, zs[i + 1]).setColor(0xFF000000);
-        }
-        var mesh = buffer.build();
-        if (mesh == null) return;
-        boolean clamped = glIsEnabled(GL_DEPTH_CLAMP);
-        if (!clamped) glEnable(GL_DEPTH_CLAMP);
-        RenderSystem.disableCull();
-        glDepthRange(1.0, 1.0);
-        try {
-            shader.setDefaultUniforms(VertexFormat.Mode.QUADS, event.getModelViewMatrix(), event.getProjectionMatrix(), mc.getWindow());
-            shader.apply();
-            BufferUploader.draw(mesh);
-        } finally {
-            shader.clear();
-            VertexBuffer.unbind();
-            glDepthRange(0.0, 1.0);
-            RenderSystem.enableCull();
-            if (!clamped) glDisable(GL_DEPTH_CLAMP);
-        }
+        cylinder.set((float) (realm.exactCenterX() - camera.x), (float) (realm.exactCenterZ() - camera.z), (float) (realm.radius() + 1.0), 0.0F);
+        disc.set((float) (realm.sourceX() - camera.x), (float) (realm.sourceZ() - camera.z), (float) (wave + 1.0), 0.0F);
     }
 }

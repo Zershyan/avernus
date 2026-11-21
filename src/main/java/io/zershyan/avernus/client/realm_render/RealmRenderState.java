@@ -185,6 +185,7 @@ public final class RealmRenderState {
         shader.safeGetUniform("RealmBounds").set(COLUMNS.minX(), COLUMNS.minZ(), COLUMNS.maxX(), COLUMNS.maxZ());
         shader.safeGetUniform("RealmTableOrigin").set(Math.floorMod(COLUMNS.minX(), size), Math.floorMod(COLUMNS.minZ(), size));
         shader.safeGetUniform("RealmTableSize").set(size);
+        RealmEnclosure.setupShader(shader, cameraPosition);
     }
 
     public static boolean hasAdditional(RenderSection section, RenderType type) {

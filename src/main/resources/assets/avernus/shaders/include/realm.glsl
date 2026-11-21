@@ -5,6 +5,10 @@ uniform int RealmTableSize;
 uniform ivec3 RealmSectionOrigin;
 uniform int RealmMeshMode;
 uniform int RealmStyle;
+uniform vec3 ChunkOffset;
+// 境内封闭：xy 为相对摄像机的圆心，z 为半径，z < 0 表示未封闭；A 为领域圆柱，B 为波面圆盘
+uniform vec4 RealmEncloseA;
+uniform vec4 RealmEncloseB;
 
 ivec4 realm_column(ivec3 cell) {
     ivec2 p = cell.xz;
@@ -24,7 +28,15 @@ bool realm_floor(ivec3 cell, ivec4 column) {
     return column.y != 0 && column.w == 0 && cell.y == column.x - 1;
 }
 
+// 摄像机身处覆盖范围时，范围外的地形一律不画，露出后方的天空
+bool realm_enclosed_out(vec3 position) {
+    if (RealmEncloseA.z < 0.0) return false;
+    vec2 p = position.xz + ChunkOffset.xz;
+    return length(p - RealmEncloseA.xy) > RealmEncloseA.z || length(p - RealmEncloseB.xy) > RealmEncloseB.z;
+}
+
 bool realm_discard(vec3 position, vec3 normal, float alpha) {
+    if (realm_enclosed_out(position)) return true;
     if (RealmMeshMode < 0) return false;
     ivec3 cell = RealmSectionOrigin + ivec3(floor(position - normal * 0.005));
     ivec4 column = realm_column(cell);

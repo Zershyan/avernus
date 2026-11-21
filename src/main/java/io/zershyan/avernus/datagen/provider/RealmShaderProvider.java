@@ -62,6 +62,8 @@ public final class RealmShaderProvider implements DataProvider {
         uniform(uniforms, "RealmSectionOrigin", "int", 0, 0, 0);
         uniform(uniforms, "RealmMeshMode", "int", 0);
         uniform(uniforms, "RealmStyle", "int", 0);
+        uniform(uniforms, "RealmEncloseA", "float", 0, 0, -1, 0);
+        uniform(uniforms, "RealmEncloseB", "float", 0, 0, -1, 0);
         return program;
     }
 

@@ -2,7 +2,6 @@ package io.zershyan.avernus.handler.client;
 
 import io.zershyan.avernus.client.mirror.MirrorAnchors;
 import io.zershyan.avernus.client.particle.RealmParticles;
-import io.zershyan.avernus.client.realm_render.RealmEnclosure;
 import io.zershyan.avernus.client.realm_render.RealmEnvironment;
 import io.zershyan.avernus.client.realm_render.RealmImpact;
 import io.zershyan.avernus.client.realm_render.RealmRenderState;
@@ -31,10 +30,7 @@ public final class RealmRenderHandler {
 
     @SubscribeEvent
     public static void onRenderStage(RenderLevelStageEvent event) {
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) {
-            RealmRenderState.renderWeakWaterAbyss(event);
-            RealmEnclosure.render(event);
-        }
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) RealmRenderState.renderWeakWaterAbyss(event);
         else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) RealmEnvironment.render(event);
     }
 
