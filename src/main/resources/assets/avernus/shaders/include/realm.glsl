@@ -28,15 +28,15 @@ bool realm_floor(ivec3 cell, ivec4 column) {
     return column.y != 0 && column.w == 0 && cell.y == column.x - 1;
 }
 
-// 摄像机身处覆盖范围时，范围外的地形一律不画，露出后方的天空
-bool realm_enclosed_out(vec3 position) {
+// 摄像机身处覆盖范围时，未被覆盖的方块列一律不画，露出后方的天空；按列中心判定，与境面列表逐列一致
+bool realm_enclosed_out(vec3 position, vec3 normal) {
     if (RealmEncloseA.z < 0.0) return false;
-    vec2 p = position.xz + ChunkOffset.xz;
+    vec2 p = ChunkOffset.xz + floor(position.xz - normal.xz * 0.005) + 0.5;
     return length(p - RealmEncloseA.xy) > RealmEncloseA.z || length(p - RealmEncloseB.xy) > RealmEncloseB.z;
 }
 
 bool realm_discard(vec3 position, vec3 normal, float alpha) {
-    if (realm_enclosed_out(position)) return true;
+    if (realm_enclosed_out(position, normal)) return true;
     if (RealmMeshMode < 0) return false;
     ivec3 cell = RealmSectionOrigin + ivec3(floor(position - normal * 0.005));
     ivec4 column = realm_column(cell);
