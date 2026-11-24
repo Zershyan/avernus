@@ -1,37 +1,44 @@
 package io.zershyan.avernus.registry.packet;
 
-import io.zershyan.avernus.Avernus;
-import io.zershyan.avernus.realm.RealmSets;
-import net.minecraft.core.UUIDUtil;
+import io.zershyan.avernus.handler.client.RealmClientPackets;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.UUID;
+import java.util.function.Supplier;
 
-public record RealmRemovePacket(ResourceKey<Level> dimension, long epoch, long order, UUID id) implements CustomPacketPayload {
-    public static final Type<RealmRemovePacket> TYPE = new Type<>(Avernus.id("realm_remove"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, RealmRemovePacket> STREAM_CODEC = StreamCodec.composite(
-            ResourceKey.streamCodec(Registries.DIMENSION), RealmRemovePacket::dimension,
-            ByteBufCodecs.VAR_LONG, RealmRemovePacket::epoch,
-            ByteBufCodecs.VAR_LONG, RealmRemovePacket::order,
-            UUIDUtil.STREAM_CODEC, RealmRemovePacket::id,
-            RealmRemovePacket::new);
+public final class RealmRemovePacket {
+    private final ResourceKey<Level> dimension;
+    private final long epoch;
+    private final long order;
+    private final UUID id;
 
-    @Override
-    public Type<RealmRemovePacket> type() {
-        return TYPE;
+    public RealmRemovePacket(ResourceKey<Level> dimension, long epoch, long order, UUID id) {
+        this.dimension = dimension;
+        this.epoch = epoch;
+        this.order = order;
+        this.id = id;
     }
 
-    public void handle(IPayloadContext context) {
-        Level level = context.player().level();
-        if (!level.dimension().equals(dimension)) return;
-        var set = RealmSets.of(level);
-        if (set.acceptUpdate(epoch, order)) set.remove(id);
+    public RealmRemovePacket(FriendlyByteBuf buf) {
+        this(buf.readResourceKey(Registries.DIMENSION), buf.readVarLong(), buf.readVarLong(), buf.readUUID());
+    }
+
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeResourceKey(dimension);
+        buf.writeVarLong(epoch);
+        buf.writeVarLong(order);
+        buf.writeUUID(id);
+    }
+
+    public void handle(Supplier<NetworkEvent.Context> supplier) {
+        NetworkEvent.Context context = supplier.get();
+        context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                () -> () -> RealmClientPackets.remove(dimension, epoch, order, id)));
     }
 }

@@ -6,29 +6,38 @@ import io.zershyan.avernus.registry.packet.RealmMotionPacket;
 import io.zershyan.avernus.registry.packet.RealmRemovePacket;
 import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
 import io.zershyan.avernus.registry.packet.RealmUpdatePacket;
-import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.network.event.RegisterPayloadHandlersEvent;
-import net.minecraftforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class AvernusPackets {
     /** 使用完整模组版本协商网络兼容性；版本不一致时拒绝连接。 */
     private static final String PROTOCOL_VERSION = ModList.get()
             .getModContainerById(Avernus.MODID)
-            .map(container -> container.getModInfo().getVersion())
-            .map(Object::toString)
+            .map(container -> container.getModInfo().getVersion().toString())
             .orElse("unknown");
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+            new ResourceLocation(Avernus.MODID, "main"), () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
+    private static int nextId;
 
-    private static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
-        registrar.playToClient(RealmUpdatePacket.TYPE, RealmUpdatePacket.STREAM_CODEC, RealmUpdatePacket::handle);
-        registrar.playToClient(RealmRemovePacket.TYPE, RealmRemovePacket.STREAM_CODEC, RealmRemovePacket::handle);
-        registrar.playToClient(RealmMotionPacket.TYPE, RealmMotionPacket.STREAM_CODEC, RealmMotionPacket::handle);
-        registrar.playToClient(RealmSnapshotPacket.TYPE, RealmSnapshotPacket.STREAM_CODEC, RealmSnapshotPacket::handle);
-        AvernusCompatFactory.registerNetwork(registrar);
+    private AvernusPackets() {
     }
 
-    public static void doRegister(IEventBus modBus) {
-        modBus.addListener(AvernusPackets::register);
+    public static int nextId() {
+        return nextId++;
+    }
+
+    public static void doRegister() {
+        INSTANCE.messageBuilder(RealmUpdatePacket.class, nextId(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(RealmUpdatePacket::new).encoder(RealmUpdatePacket::encode).consumerMainThread(RealmUpdatePacket::handle).add();
+        INSTANCE.messageBuilder(RealmRemovePacket.class, nextId(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(RealmRemovePacket::new).encoder(RealmRemovePacket::encode).consumerMainThread(RealmRemovePacket::handle).add();
+        INSTANCE.messageBuilder(RealmMotionPacket.class, nextId(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(RealmMotionPacket::new).encoder(RealmMotionPacket::encode).consumerMainThread(RealmMotionPacket::handle).add();
+        INSTANCE.messageBuilder(RealmSnapshotPacket.class, nextId(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(RealmSnapshotPacket::new).encoder(RealmSnapshotPacket::encode).consumerMainThread(RealmSnapshotPacket::handle).add();
+        AvernusCompatFactory.registerNetwork(INSTANCE);
     }
 }

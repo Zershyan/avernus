@@ -1,5 +1,6 @@
 package io.zershyan.avernus.realm;
 
+import io.zershyan.avernus.registry.AvernusPackets;
 import io.zershyan.avernus.registry.packet.RealmMotionPacket;
 import io.zershyan.avernus.registry.packet.RealmRemovePacket;
 import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
@@ -42,7 +43,7 @@ public final class RealmSync {
         if (player.connection == null) return;
         Observer observer = new Observer(player);
         OBSERVERS.put(player.getUUID(), observer);
-        PacketDistributor.sendToPlayer(player, new RealmSnapshotPacket(observer.dimension, observer.epoch));
+        AvernusPackets.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new RealmSnapshotPacket(observer.dimension, observer.epoch));
         sync(observer, RealmSets.of(player.serverLevel()));
     }
 
@@ -79,9 +80,11 @@ public final class RealmSync {
             Realm.Motion motion = realm.motion();
             Long known = observer.revisions.get(realm.id());
             if (known == null) {
-                PacketDistributor.sendToPlayer(observer.player, new RealmUpdatePacket(observer.epoch, ++observer.order, realm.snapshot()));
+                AvernusPackets.INSTANCE.send(PacketDistributor.PLAYER.with(() -> observer.player),
+                        new RealmUpdatePacket(observer.epoch, ++observer.order, realm.snapshot()));
             } else if (known < motion.revision()) {
-                PacketDistributor.sendToPlayer(observer.player, new RealmMotionPacket(observer.dimension, observer.epoch, ++observer.order, realm.id(), motion));
+                AvernusPackets.INSTANCE.send(PacketDistributor.PLAYER.with(() -> observer.player),
+                        new RealmMotionPacket(observer.dimension, observer.epoch, ++observer.order, realm.id(), motion));
             } else continue;
             observer.revisions.put(realm.id(), motion.revision());
         }
@@ -112,7 +115,8 @@ public final class RealmSync {
     }
 
     private static void sendRemoval(Observer observer, UUID id) {
-        PacketDistributor.sendToPlayer(observer.player, new RealmRemovePacket(observer.dimension, observer.epoch, ++observer.order, id));
+        AvernusPackets.INSTANCE.send(PacketDistributor.PLAYER.with(() -> observer.player),
+                new RealmRemovePacket(observer.dimension, observer.epoch, ++observer.order, id));
     }
 
     public static void forget(UUID player) {

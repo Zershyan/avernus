@@ -6,9 +6,8 @@ import io.zershyan.avernus.api.realm.RealmView;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
 import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -28,16 +27,20 @@ import java.util.UUID;
  */
 public final class Realm implements RealmView {
     public record Motion(long revision, long closeTime, double centerX, double centerZ, Vec3 chest, double headY, int teleportSeq) {
-        public static final StreamCodec<RegistryFriendlyByteBuf, Motion> STREAM_CODEC = StreamCodec.of((buf, value) -> {
-            buf.writeVarLong(value.revision);
-            buf.writeLong(value.closeTime);
-            buf.writeDouble(value.centerX);
-            buf.writeDouble(value.centerZ);
-            buf.writeVec3(value.chest);
-            buf.writeDouble(value.headY);
-            buf.writeVarInt(value.teleportSeq);
-        }, buf -> new Motion(buf.readVarLong(), buf.readLong(), buf.readDouble(), buf.readDouble(),
-                buf.readVec3(), buf.readDouble(), buf.readVarInt()));
+        public void write(FriendlyByteBuf buf) {
+            buf.writeVarLong(revision);
+            buf.writeLong(closeTime);
+            buf.writeDouble(centerX);
+            buf.writeDouble(centerZ);
+            writeVec3(buf, chest);
+            buf.writeDouble(headY);
+            buf.writeVarInt(teleportSeq);
+        }
+
+        public static Motion read(FriendlyByteBuf buf) {
+            return new Motion(buf.readVarLong(), buf.readLong(), buf.readDouble(), buf.readDouble(),
+                    readVec3(buf), buf.readDouble(), buf.readVarInt());
+        }
 
         public Vec3 head() {
             return new Vec3(chest.x, headY, chest.z);
@@ -48,7 +51,13 @@ public final class Realm implements RealmView {
                            int height, int radius, long sequence, long startTime, long seed, RealmTimeline timeline,
                            Vec3 launchOrigin, float launchYaw, double sourceOffsetX, double sourceOffsetZ,
                            Motion motion) {
-        public static final StreamCodec<RegistryFriendlyByteBuf, Snapshot> STREAM_CODEC = StreamCodec.of(Realm::encode, Realm::decode);
+        public void write(FriendlyByteBuf buf) {
+            Realm.write(buf, this);
+        }
+
+        public static Snapshot read(FriendlyByteBuf buf) {
+            return Realm.read(buf);
+        }
 
         public @Nullable Realm instantiate() {
             return MirrorForms.resolve(form).map(resolved -> new Realm(this, resolved)).orElse(null);
@@ -403,31 +412,41 @@ public final class Realm implements RealmView {
 
     // region 网络
 
-    private static void encode(RegistryFriendlyByteBuf buf, Snapshot realm) {
-        UUIDUtil.STREAM_CODEC.encode(buf, realm.id);
-        UUIDUtil.STREAM_CODEC.encode(buf, realm.ownerId);
+    private static void write(FriendlyByteBuf buf, Snapshot realm) {
+        buf.writeUUID(realm.id);
+        buf.writeUUID(realm.ownerId);
         buf.writeVarInt(realm.ownerEntityId);
         buf.writeResourceKey(realm.dimension);
-        MirrorForms.STREAM_CODEC.encode(buf, realm.form);
+        MirrorForms.write(buf, realm.form);
         buf.writeVarInt(realm.height);
         buf.writeVarInt(realm.radius);
         buf.writeVarLong(realm.sequence);
         buf.writeVarLong(realm.startTime);
         buf.writeLong(realm.seed);
-        RealmTimeline.STREAM_CODEC.encode(buf, realm.timeline);
-        buf.writeVec3(realm.launchOrigin);
+        realm.timeline.write(buf);
+        writeVec3(buf, realm.launchOrigin);
         buf.writeFloat(realm.launchYaw);
         buf.writeDouble(realm.sourceOffsetX);
         buf.writeDouble(realm.sourceOffsetZ);
-        Motion.STREAM_CODEC.encode(buf, realm.motion);
+        realm.motion.write(buf);
     }
 
-    private static Snapshot decode(RegistryFriendlyByteBuf buf) {
-        return new Snapshot(UUIDUtil.STREAM_CODEC.decode(buf), UUIDUtil.STREAM_CODEC.decode(buf), buf.readVarInt(),
-                buf.readResourceKey(net.minecraft.core.registries.Registries.DIMENSION), MirrorForms.STREAM_CODEC.decode(buf),
+    private static Snapshot read(FriendlyByteBuf buf) {
+        return new Snapshot(buf.readUUID(), buf.readUUID(), buf.readVarInt(),
+                buf.readResourceKey(Registries.DIMENSION), MirrorForms.read(buf),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarLong(), buf.readVarLong(), buf.readLong(),
-                RealmTimeline.STREAM_CODEC.decode(buf), buf.readVec3(), buf.readFloat(),
-                buf.readDouble(), buf.readDouble(), Motion.STREAM_CODEC.decode(buf));
+                RealmTimeline.read(buf), readVec3(buf), buf.readFloat(),
+                buf.readDouble(), buf.readDouble(), Motion.read(buf));
+    }
+
+    private static void writeVec3(FriendlyByteBuf buf, Vec3 value) {
+        buf.writeDouble(value.x);
+        buf.writeDouble(value.y);
+        buf.writeDouble(value.z);
+    }
+
+    private static Vec3 readVec3(FriendlyByteBuf buf) {
+        return new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
     }
 
     // endregion

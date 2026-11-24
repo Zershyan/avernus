@@ -1,21 +1,22 @@
 package io.zershyan.avernus.realm;
 
-import io.netty.buffer.ByteBuf;
 import io.zershyan.avernus.registry.config.ServerConfig;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 
 /** 开境时冻结的演出时长快照，随领域同步，客户端不得自行改变节奏。 */
 public record RealmTimeline(int flyTicks, int turnTicks, int crackTicks, int scatterTicks, int waveTicks, float flyDistance) {
-    public static final StreamCodec<ByteBuf, RealmTimeline> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, RealmTimeline::flyTicks,
-            ByteBufCodecs.VAR_INT, RealmTimeline::turnTicks,
-            ByteBufCodecs.VAR_INT, RealmTimeline::crackTicks,
-            ByteBufCodecs.VAR_INT, RealmTimeline::scatterTicks,
-            ByteBufCodecs.VAR_INT, RealmTimeline::waveTicks,
-            ByteBufCodecs.FLOAT, RealmTimeline::flyDistance,
-            RealmTimeline::new
-    );
+    public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(flyTicks);
+        buf.writeVarInt(turnTicks);
+        buf.writeVarInt(crackTicks);
+        buf.writeVarInt(scatterTicks);
+        buf.writeVarInt(waveTicks);
+        buf.writeFloat(flyDistance);
+    }
+
+    public static RealmTimeline read(FriendlyByteBuf buf) {
+        return new RealmTimeline(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readFloat());
+    }
 
     public static RealmTimeline fromConfig() {
         return new RealmTimeline(

@@ -1,28 +1,36 @@
 package io.zershyan.avernus.realm;
 
-import io.netty.buffer.ByteBuf;
 import io.zershyan.avernus.api.realm.MirrorForm;
 import io.zershyan.avernus.registry.AvernusRegistries;
 import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 /** 镜子形态的内部编解码与注册解析；公开值对象不依赖注册实现。 */
 public final class MirrorForms {
-    public static final StreamCodec<ByteBuf, MirrorForm> STREAM_CODEC = StreamCodec.composite(
-            ResourceLocation.STREAM_CODEC, MirrorForm::aspect,
-            ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs.list(MirrorForm.MAX_TRAITS)), MirrorForm::traits,
-            MirrorForm::new
-    );
-
     private MirrorForms() {
+    }
+
+    public static void write(FriendlyByteBuf buf, MirrorForm form) {
+        buf.writeResourceLocation(form.aspect());
+        buf.writeVarInt(form.traits().size());
+        for (ResourceLocation trait : form.traits()) buf.writeResourceLocation(trait);
+    }
+
+    public static MirrorForm read(FriendlyByteBuf buf) {
+        ResourceLocation aspect = buf.readResourceLocation();
+        int size = Math.min(buf.readVarInt(), MirrorForm.MAX_TRAITS);
+        List<ResourceLocation> traits = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) traits.add(buf.readResourceLocation());
+        return new MirrorForm(aspect, traits);
     }
 
     /** 解析为注册对象；存在未注册 ID、超界或境印冲突时返回空。 */

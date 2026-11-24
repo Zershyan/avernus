@@ -2,7 +2,7 @@ package io.zershyan.avernus.compat;
 
 import io.zershyan.avernus.compat.curios.CuriosCompat;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -25,7 +25,7 @@ public final class AvernusCompatFactory {
         COMPAT.forEach(utils -> utils.initial(forgeBus, modBus));
     }
 
-    public static void registerNetwork(PayloadRegistrar registrar) {
-        COMPAT.forEach(utils -> utils.initNetwork(registrar));
+    public static void registerNetwork(SimpleChannel channel) {
+        COMPAT.forEach(utils -> utils.initNetwork(channel));
     }
 }

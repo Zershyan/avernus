@@ -9,7 +9,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class CuriosCompat implements ICompatUtils {
     public static final String MODID = "curios";
@@ -30,8 +30,8 @@ public final class CuriosCompat implements ICompatUtils {
     }
 
     @Override
-    public void registerNetwork(PayloadRegistrar registrar) {
-        CuriosToggleMirrorPacket.doRegister(registrar);
+    public void registerNetwork(SimpleChannel channel) {
+        CuriosToggleMirrorPacket.doRegister(channel);
     }
 
     public ItemStack findWornMirror(LivingEntity entity) {

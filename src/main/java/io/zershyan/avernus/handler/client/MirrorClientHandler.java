@@ -14,10 +14,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.client.event.ClientTickEvent;
+import io.zershyan.avernus.registry.AvernusPackets;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.List;
 
@@ -27,12 +27,13 @@ public final class MirrorClientHandler {
     }
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         KeyMapping key = CuriosKeyMappings.toggleRealm();
         if (key == null || Minecraft.getInstance().player == null) return;
         boolean pressed = false;
         while (key.consumeClick()) pressed = true;
-        if (pressed) PacketDistributor.sendToServer(new CuriosToggleMirrorPacket());
+        if (pressed) AvernusPackets.INSTANCE.sendToServer(new CuriosToggleMirrorPacket());
     }
 
     @SubscribeEvent

@@ -3,7 +3,7 @@ package io.zershyan.avernus.compat;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.loading.FMLLoader;
-import net.minecraftforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.network.simple.SimpleChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,15 +46,15 @@ public interface ICompatUtils {
         }
     }
 
-    default void initNetwork(PayloadRegistrar registrar) {
+    default void initNetwork(SimpleChannel channel) {
         try {
-            testLoadedAndRun(() -> registerNetwork(registrar));
+            testLoadedAndRun(() -> registerNetwork(channel));
         } catch (Exception e) {
             LOGGER.error("兼容网络注册失败：{}", getClass().getSimpleName(), e);
         }
     }
 
-    default void registerNetwork(PayloadRegistrar registrar) {
+    default void registerNetwork(SimpleChannel channel) {
     }
 
     boolean isModLoaded();
