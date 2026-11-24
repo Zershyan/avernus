@@ -8,25 +8,25 @@ import io.zershyan.avernus.registry.AvernusSounds;
 import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.sounds.SoundEvent;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraftforge.registries.RegistryObject;
 
 public class AvernusRegistryLang extends AvernusLang {
 
     /** 境相名、描述与对应镜子的名称；境相只在提示中显示，不进物品名。 */
-    private void aspect(DeferredHolder<RealmAspect, RealmAspect> holder, String enUs, String zhCn, String descEn, String descZh) {
+    private void aspect(RegistryObject<RealmAspect, RealmAspect> holder, String enUs, String zhCn, String descEn, String descZh) {
         addFinalEntry(RealmAspect.languageKey(holder.getId()), enUs, zhCn);
         addFinalEntry(RealmAspect.descriptionKey(holder.getId()), descEn, descZh);
         addFinalEntry(AvernusItems.MIRRORS_BY_ASPECT.get(holder).get(), "Mirror of Avernus", "阿维尔诺之镜");
     }
 
     /** 境印名称、作用说明与对应刻印材料的名称。 */
-    private void trait(DeferredHolder<RealmTrait, RealmTrait> holder, String enUs, String zhCn, String descEn, String descZh) {
+    private void trait(RegistryObject<RealmTrait, RealmTrait> holder, String enUs, String zhCn, String descEn, String descZh) {
         addFinalEntry(RealmTrait.languageKey(holder.getId()), enUs + " Sigil", zhCn + "境印");
         addFinalEntry(RealmTrait.descriptionKey(holder.getId()), descEn, descZh);
         addFinalEntry(AvernusItems.SIGILS.get(holder).get(), enUs + " Sigil", zhCn + "境印");
     }
 
-    private void subtitle(DeferredHolder<SoundEvent, SoundEvent> sound, String enUs, String zhCn) {
+    private void subtitle(RegistryObject<SoundEvent, SoundEvent> sound, String enUs, String zhCn) {
         addFinalEntry(sound.getId().toLanguageKey("subtitles"), enUs, zhCn);
     }
 

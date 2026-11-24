@@ -3,8 +3,8 @@ package io.zershyan.avernus.registry;
 import io.zershyan.avernus.client.particle.RealmParticle;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleType;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 
 /** 领域粒子提供器的客户端注册；仅在客户端调用。 */
 public final class AvernusParticleProviders {

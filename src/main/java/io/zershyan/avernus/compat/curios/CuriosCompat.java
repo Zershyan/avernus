@@ -7,9 +7,9 @@ import io.zershyan.avernus.compat.curios.registry.CuriosToggleMirrorPacket;
 import io.zershyan.avernus.compat.curios.util.CuriosAccess;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.network.registration.PayloadRegistrar;
 
 public final class CuriosCompat implements ICompatUtils {
     public static final String MODID = "curios";

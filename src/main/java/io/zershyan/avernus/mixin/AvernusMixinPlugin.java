@@ -1,7 +1,7 @@
 package io.zershyan.avernus.mixin;
 
-import net.neoforged.fml.loading.LoadingModList;
-import net.neoforged.fml.loading.moddiscovery.ModInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
+import net.minecraftforge.fml.loading.LoadingModList;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -22,7 +22,7 @@ public class AvernusMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (mixinClassName.contains(".example.mixin.")) return false;
-        List<String> modIds = LoadingModList.get().getMods().stream().map(ModInfo::getModId).toList();
+        List<String> modIds = LoadingModList.get().getMods().stream().map(IModInfo::getModId).toList();
         String relativeName = mixinClassName.substring(getClass().getPackageName().length() + 1);
         String packageName = relativeName.substring(0, relativeName.lastIndexOf('.'));
         for (String segment : packageName.split("\\.")) {

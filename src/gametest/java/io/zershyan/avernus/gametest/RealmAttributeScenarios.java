@@ -28,10 +28,10 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
@@ -136,8 +136,8 @@ public final class RealmAttributeScenarios {
                     event.getModifiers().remove(Attributes.MAX_HEALTH);
                 }
             };
-            NeoForge.EVENT_BUS.addListener(configure);
-            NeoForge.EVENT_BUS.addListener(apply);
+            MinecraftForge.EVENT_BUS.addListener(configure);
+            MinecraftForge.EVENT_BUS.addListener(apply);
             try {
                 ServerConfig.UMBRAL_OWNER_SPEED_BONUS.set(0.4);
                 scene.update();
@@ -149,8 +149,8 @@ public final class RealmAttributeScenarios {
                 assertAmount(helper, scene.other(), Attributes.MAX_HEALTH, 0.25);
                 helper.assertTrue(scene.other().getAttribute(Attributes.LUCK) == null, "缺少的属性不得强行创建");
             } finally {
-                NeoForge.EVENT_BUS.unregister(configure);
-                NeoForge.EVENT_BUS.unregister(apply);
+                MinecraftForge.EVENT_BUS.unregister(configure);
+                MinecraftForge.EVENT_BUS.unregister(apply);
                 ServerConfig.UMBRAL_OWNER_SPEED_BONUS.set(old);
             }
         });
@@ -163,25 +163,25 @@ public final class RealmAttributeScenarios {
             Consumer<RealmAttributeEvent.Apply> apply = event -> {
                 if (event.getEntity() == scene.target()) event.setCanceled(true);
             };
-            NeoForge.EVENT_BUS.addListener(apply);
+            MinecraftForge.EVENT_BUS.addListener(apply);
             try {
                 scene.update();
                 assertClear(helper, scene.target());
                 assertAmount(helper, scene.other(), Attributes.MOVEMENT_SPEED, -0.2);
             } finally {
-                NeoForge.EVENT_BUS.unregister(apply);
+                MinecraftForge.EVENT_BUS.unregister(apply);
             }
             Consumer<RealmAttributeEvent.Configure> configure = event -> {
                 if (event.getRealm().id().equals(scene.realm().id())) event.setCanceled(true);
             };
-            NeoForge.EVENT_BUS.addListener(configure);
+            MinecraftForge.EVENT_BUS.addListener(configure);
             try {
                 scene.update();
                 assertClear(helper, scene.owner());
                 assertClear(helper, scene.target());
                 assertClear(helper, scene.other());
             } finally {
-                NeoForge.EVENT_BUS.unregister(configure);
+                MinecraftForge.EVENT_BUS.unregister(configure);
             }
             scene.update();
             assertAmount(helper, scene.target(), Attributes.MOVEMENT_SPEED, -0.2);
@@ -372,18 +372,18 @@ public final class RealmAttributeScenarios {
             Consumer<RealmAttributeEvent.Apply> ally = event -> {
                 if (event.getEntity() == scene.target()) scoreboard.addPlayerToTeam(scene.target().getScoreboardName(), team);
             };
-            NeoForge.EVENT_BUS.addListener(ally);
+            MinecraftForge.EVENT_BUS.addListener(ally);
             try {
                 scene.update();
                 assertClear(helper, scene.target());
             } finally {
-                NeoForge.EVENT_BUS.unregister(ally);
+                MinecraftForge.EVENT_BUS.unregister(ally);
                 scoreboard.removePlayerTeam(team);
             }
             Consumer<RealmAttributeEvent.Apply> close = event -> {
                 if (event.getEntity() == scene.target()) scene.close();
             };
-            NeoForge.EVENT_BUS.addListener(close);
+            MinecraftForge.EVENT_BUS.addListener(close);
             try {
                 scene.update();
                 assertClear(helper, scene.owner());
@@ -391,7 +391,7 @@ public final class RealmAttributeScenarios {
                 assertClear(helper, scene.other());
                 helper.assertTrue(AvernusApi.realmAt(scene.target()) == null, "事件中关闭境后不得重新施加旧属性");
             } finally {
-                NeoForge.EVENT_BUS.unregister(close);
+                MinecraftForge.EVENT_BUS.unregister(close);
             }
         });
     }

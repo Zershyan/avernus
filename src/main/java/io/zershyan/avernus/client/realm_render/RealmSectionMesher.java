@@ -18,10 +18,10 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.client.textures.FluidSpriteCache;
-import net.neoforged.neoforge.client.model.lighting.QuadLighter;
+import net.minecraftforge.client.event.AddSectionGeometryEvent;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraftforge.client.textures.FluidSpriteCache;
+import net.minecraftforge.client.model.lighting.QuadLighter;
 
 /** 只烘焙与波纹无关的网格；实际可见面在绘制时由相邻列决定。 */
 final class RealmSectionMesher {

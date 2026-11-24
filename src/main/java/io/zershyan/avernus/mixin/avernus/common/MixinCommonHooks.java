@@ -8,7 +8,7 @@ import io.zershyan.avernus.realm.RealmProtection;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
-import net.neoforged.neoforge.common.CommonHooks;
+import net.minecraftforge.common.CommonHooks;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 

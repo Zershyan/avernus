@@ -20,7 +20,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -75,7 +75,7 @@ public final class RealmManager {
         realm.traits().forEach(trait -> trait.onRealmOpened(realm));
         RealmSync.tick(level, RealmSets.of(level));
         play(level, realm.launchOrigin(), AvernusSounds.MIRROR_THROW.get());
-        NeoForge.EVENT_BUS.post(new RealmEvent.Opened(level, realm));
+        MinecraftForge.EVENT_BUS.post(new RealmEvent.Opened(level, realm));
         return RealmResult.OPENED;
     }
 
@@ -112,7 +112,7 @@ public final class RealmManager {
         startCooldown(level, realm);
         if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) realm.moveAnchor(chestOf(owner), headY(owner), false);
         RealmSync.tick(level, RealmSets.of(level));
-        NeoForge.EVENT_BUS.post(new RealmEvent.Closing(level, realm));
+        MinecraftForge.EVENT_BUS.post(new RealmEvent.Closing(level, realm));
         return true;
     }
 
@@ -143,7 +143,7 @@ public final class RealmManager {
         realm.aspect().onRealmClosed(realm);
         realm.traits().forEach(trait -> trait.onRealmClosed(realm));
         RealmSync.remove(level, realm);
-        NeoForge.EVENT_BUS.post(new RealmEvent.Removed(level, realm, emergency));
+        MinecraftForge.EVENT_BUS.post(new RealmEvent.Removed(level, realm, emergency));
     }
 
     // endregion

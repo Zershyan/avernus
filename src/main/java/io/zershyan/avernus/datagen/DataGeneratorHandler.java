@@ -11,7 +11,7 @@ import io.zershyan.avernus.datagen.provider.PackMetadataProvider;
 import io.zershyan.avernus.datagen.provider.RealmShaderProvider;
 import io.zershyan.avernus.datagen.provider.RealmVisualProvider;
 import net.minecraft.data.PackOutput;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.minecraftforge.common.data.ExistingFileHelper;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 public class DataGeneratorHandler {

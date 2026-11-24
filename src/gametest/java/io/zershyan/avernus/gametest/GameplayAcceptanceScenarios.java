@@ -26,9 +26,9 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,7 +109,7 @@ public final class GameplayAcceptanceScenarios {
         CuriosFixture.verify(helper, player, mirror);
     }
 
-    private static Item sigil(DeferredHolder<RealmTrait, RealmTrait> trait) {
+    private static Item sigil(RegistryObject<RealmTrait, RealmTrait> trait) {
         return AvernusItems.SIGILS.get(trait).get();
     }
 

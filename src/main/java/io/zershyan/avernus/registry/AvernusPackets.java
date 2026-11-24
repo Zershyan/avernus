@@ -6,10 +6,10 @@ import io.zershyan.avernus.registry.packet.RealmMotionPacket;
 import io.zershyan.avernus.registry.packet.RealmRemovePacket;
 import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
 import io.zershyan.avernus.registry.packet.RealmUpdatePacket;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.network.event.RegisterPayloadHandlersEvent;
+import net.minecraftforge.network.registration.PayloadRegistrar;
 
 public final class AvernusPackets {
     /** 使用完整模组版本协商网络兼容性；版本不一致时拒绝连接。 */

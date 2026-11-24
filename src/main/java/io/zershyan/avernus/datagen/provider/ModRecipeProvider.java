@@ -21,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraftforge.registries.RegistryObject;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -65,7 +65,7 @@ public class ModRecipeProvider extends RecipeProvider {
     }
 
     /** 原版材料一比一合成印记，印记在锻造台增删境印。 */
-    private static void trait(RecipeOutput output, DeferredHolder<RealmTrait, RealmTrait> trait, ItemLike material) {
+    private static void trait(RecipeOutput output, RegistryObject<RealmTrait, RealmTrait> trait, ItemLike material) {
         TraitSigilItem sigil = AvernusItems.SIGILS.get(trait).get();
         ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, sigil)
                 .requires(material)

@@ -3,10 +3,8 @@ package io.zershyan.avernus.registry.config;
 import io.zershyan.avernus.datagen.lang.AvernusConfigLang;
 import io.zershyan.avernus.datagen.util.ConfigLangEntry;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.TranslatableEnum;
-
 /** 领域特效档位；序号即着色器里的 Quality。 */
-public enum RealmFxQuality implements TranslatableEnum {
+public enum RealmFxQuality {
     OFF(AvernusConfigLang.QualityOff, 0, 0, 0.0F, 0),
     LOW(AvernusConfigLang.QualityLow, 0, 0, 0.35F, 0),
     MEDIUM(AvernusConfigLang.QualityMedium, 4, 2, 0.6F, 0),
@@ -31,7 +29,6 @@ public enum RealmFxQuality implements TranslatableEnum {
         return ordinal() >= other.ordinal();
     }
 
-    @Override
     public Component getTranslatedName() {
         return Component.translatable(label.key());
     }

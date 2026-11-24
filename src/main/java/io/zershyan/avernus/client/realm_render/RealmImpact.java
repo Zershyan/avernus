@@ -7,7 +7,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.minecraftforge.client.event.ViewportEvent;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 

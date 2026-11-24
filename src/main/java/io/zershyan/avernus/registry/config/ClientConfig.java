@@ -1,16 +1,16 @@
 package io.zershyan.avernus.registry.config;
 
 import io.zershyan.avernus.datagen.lang.AvernusConfigLang;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /** 客户端画面配置，运行中修改立即生效。 */
 public class ClientConfig {
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
-    public static final ModConfigSpec.EnumValue<RealmFxQuality> QUALITY;
-    public static final ModConfigSpec.BooleanValue SCREEN_SHAKE;
-    public static final ModConfigSpec.BooleanValue SCREEN_FLASH;
+    public static final ForgeConfigSpec.EnumValue<RealmFxQuality> QUALITY;
+    public static final ForgeConfigSpec.BooleanValue SCREEN_SHAKE;
+    public static final ForgeConfigSpec.BooleanValue SCREEN_FLASH;
 
     static {
         BUILDER.push(AvernusConfigLang.Visual.name());

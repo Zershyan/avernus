@@ -3,7 +3,7 @@ package io.zershyan.avernus.compat.curios.registry;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.zershyan.avernus.api.AvernusApi;
 import net.minecraft.client.KeyMapping;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import org.jetbrains.annotations.Nullable;
 
 /** 胸饰镜开关键，仅在安装 Curios 时注册，默认未绑定。 */

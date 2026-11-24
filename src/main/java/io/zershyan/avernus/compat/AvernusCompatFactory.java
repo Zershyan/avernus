@@ -1,8 +1,8 @@
 package io.zershyan.avernus.compat;
 
 import io.zershyan.avernus.compat.curios.CuriosCompat;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.network.registration.PayloadRegistrar;
 
 import java.util.HashSet;
 import java.util.Set;

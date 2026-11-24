@@ -1,38 +1,38 @@
 package io.zershyan.avernus.registry.config;
 
 import io.zershyan.avernus.datagen.lang.AvernusConfigLang;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /** 服务端玩法配置；半径与演出在开境时冻结，境相属性按当前配置实时计算。 */
 public class ServerConfig {
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
-    public static final ModConfigSpec.IntValue REALM_RADIUS;
-    public static final ModConfigSpec.IntValue CLOSE_COOLDOWN_TICKS;
+    public static final ForgeConfigSpec.IntValue REALM_RADIUS;
+    public static final ForgeConfigSpec.IntValue CLOSE_COOLDOWN_TICKS;
 
-    public static final ModConfigSpec.DoubleValue UMBRAL_OWNER_SPEED_BONUS;
-    public static final ModConfigSpec.DoubleValue UMBRAL_OWNER_JUMP_BONUS;
-    public static final ModConfigSpec.DoubleValue UMBRAL_OTHER_SPEED_PENALTY;
-    public static final ModConfigSpec.DoubleValue INFERNAL_OWNER_ATTACK_BONUS;
-    public static final ModConfigSpec.DoubleValue INFERNAL_OTHER_ATTACK_PENALTY;
-    public static final ModConfigSpec.DoubleValue SILENT_OWNER_ARMOR_BONUS;
-    public static final ModConfigSpec.DoubleValue SILENT_OWNER_TOUGHNESS_BONUS;
-    public static final ModConfigSpec.DoubleValue SILENT_OTHER_ARMOR_PENALTY;
-    public static final ModConfigSpec.DoubleValue SILENT_OTHER_TOUGHNESS_PENALTY;
+    public static final ForgeConfigSpec.DoubleValue UMBRAL_OWNER_SPEED_BONUS;
+    public static final ForgeConfigSpec.DoubleValue UMBRAL_OWNER_JUMP_BONUS;
+    public static final ForgeConfigSpec.DoubleValue UMBRAL_OTHER_SPEED_PENALTY;
+    public static final ForgeConfigSpec.DoubleValue INFERNAL_OWNER_ATTACK_BONUS;
+    public static final ForgeConfigSpec.DoubleValue INFERNAL_OTHER_ATTACK_PENALTY;
+    public static final ForgeConfigSpec.DoubleValue SILENT_OWNER_ARMOR_BONUS;
+    public static final ForgeConfigSpec.DoubleValue SILENT_OWNER_TOUGHNESS_BONUS;
+    public static final ForgeConfigSpec.DoubleValue SILENT_OTHER_ARMOR_PENALTY;
+    public static final ForgeConfigSpec.DoubleValue SILENT_OTHER_TOUGHNESS_PENALTY;
 
-    public static final ModConfigSpec.DoubleValue MIRROR_FLY_DISTANCE;
-    public static final ModConfigSpec.IntValue MIRROR_FLY_TICKS;
-    public static final ModConfigSpec.IntValue MIRROR_TURN_TICKS;
-    public static final ModConfigSpec.IntValue MIRROR_CRACK_TICKS;
-    public static final ModConfigSpec.IntValue SHARD_SCATTER_TICKS;
-    public static final ModConfigSpec.IntValue WAVE_TICKS;
+    public static final ForgeConfigSpec.DoubleValue MIRROR_FLY_DISTANCE;
+    public static final ForgeConfigSpec.IntValue MIRROR_FLY_TICKS;
+    public static final ForgeConfigSpec.IntValue MIRROR_TURN_TICKS;
+    public static final ForgeConfigSpec.IntValue MIRROR_CRACK_TICKS;
+    public static final ForgeConfigSpec.IntValue SHARD_SCATTER_TICKS;
+    public static final ForgeConfigSpec.IntValue WAVE_TICKS;
 
-    public static final ModConfigSpec.IntValue REBIRTH_REGENERATION_TICKS;
-    public static final ModConfigSpec.IntValue REBIRTH_REGENERATION_LEVEL;
-    public static final ModConfigSpec.IntValue REBIRTH_ABSORPTION_TICKS;
-    public static final ModConfigSpec.IntValue REBIRTH_ABSORPTION_LEVEL;
-    public static final ModConfigSpec.IntValue REBIRTH_FIRE_RESISTANCE_TICKS;
+    public static final ForgeConfigSpec.IntValue REBIRTH_REGENERATION_TICKS;
+    public static final ForgeConfigSpec.IntValue REBIRTH_REGENERATION_LEVEL;
+    public static final ForgeConfigSpec.IntValue REBIRTH_ABSORPTION_TICKS;
+    public static final ForgeConfigSpec.IntValue REBIRTH_ABSORPTION_LEVEL;
+    public static final ForgeConfigSpec.IntValue REBIRTH_FIRE_RESISTANCE_TICKS;
 
     static {
         BUILDER.push(AvernusConfigLang.Realm.name());

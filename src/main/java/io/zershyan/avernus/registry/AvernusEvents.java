@@ -8,34 +8,25 @@ import io.zershyan.avernus.handler.common.RealmLifecycleHandler;
 import io.zershyan.avernus.handler.common.RealmPresenceHandler;
 import io.zershyan.avernus.handler.common.RealmProtectionHandler;
 import io.zershyan.avernus.handler.common.RealmTraitHandler;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.data.loading.DatagenModLoader;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.DistExecutor;
 
 public final class AvernusEvents {
-    public static void doRegister(IEventBus modBus, Dist dist) {
-        IEventBus gameBus = NeoForge.EVENT_BUS;
-
-        gameBus.register(RealmLifecycleHandler.class);
-        gameBus.register(RealmAttributeHandler.class);
-        gameBus.register(RealmPresenceHandler.class);
-        gameBus.register(RealmProtectionHandler.class);
-        gameBus.register(RealmTraitHandler.class);
-        if (dist.isClient()) Client.register(gameBus);
-        if (DatagenModLoader.isRunningDataGen()) Data.register(modBus);
+    public static void doRegister(IEventBus forgeBus, IEventBus modBus) {
+        forgeBus.register(RealmLifecycleHandler.class);
+        forgeBus.register(RealmAttributeHandler.class);
+        forgeBus.register(RealmPresenceHandler.class);
+        forgeBus.register(RealmProtectionHandler.class);
+        forgeBus.register(RealmTraitHandler.class);
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> Client.register(forgeBus));
+        modBus.addListener(DataGeneratorHandler::gatherData);
     }
 
     private static class Client {
-        static void register(IEventBus gameBus) {
-            gameBus.register(MirrorClientHandler.class);
-            gameBus.register(RealmRenderHandler.class);
-        }
-    }
-
-    private static class Data {
-        static void register(IEventBus bus) {
-            bus.addListener(DataGeneratorHandler::gatherData);
+        static void register(IEventBus forgeBus) {
+            forgeBus.register(MirrorClientHandler.class);
+            forgeBus.register(RealmRenderHandler.class);
         }
     }
 }

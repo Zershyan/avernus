@@ -19,7 +19,7 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.AddSectionGeometryEvent.SectionRenderingContext;
+import net.minecraftforge.client.event.AddSectionGeometryEvent.SectionRenderingContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;

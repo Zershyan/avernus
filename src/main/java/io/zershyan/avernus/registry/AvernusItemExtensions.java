@@ -2,9 +2,9 @@ package io.zershyan.avernus.registry;
 
 import io.zershyan.avernus.client.mirror.MirrorItemRenderer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import net.minecraftforge.client.extensions.common.RegisterClientExtensionsEvent;
 import org.jetbrains.annotations.NotNull;
 
 /** 镜子的客户端物品渲染扩展注册；仅在客户端调用。 */

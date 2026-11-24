@@ -5,9 +5,9 @@ import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.NewRegistryEvent;
-import net.neoforged.neoforge.registries.RegistryBuilder;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.NewRegistryEvent;
+import net.minecraftforge.registries.RegistryBuilder;
 
 /** 自定义注册表声明：境相与境印，第三方可通过对应注册表键注册条目。 */
 public class AvernusRegistries {

@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.148'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148'
     id 'idea'
 }
 
@@ -48,23 +48,31 @@ repositories {
             includeGroup "net.mezzdev.config"
         }
     }
+    maven {
+        name = 'MafuyuNexus'
+        url = 'https://maven.sighs.cc/repository/maven-public/'
+    }
 }
 
 base {
     archivesName = mod_id
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+// Forge 1.20.1 使用 Java 17
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-neoForge {
-    version = project.neo_version
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
 
     parchment {
-        mappingsVersion = project.parchment_mappings_version
         minecraftVersion = project.parchment_minecraft_version
+        mappingsVersion = project.parchment_mappings_version
     }
 
-    // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
+    mixin {
+        add sourceSets.main, "${mod_id}.refmap.json"
+        config "${mod_id}.mixins.json"
+    }
 
     mods {
         "${mod_id}" {
@@ -79,14 +87,14 @@ neoForge {
     runs {
         client1 {
             client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
             gameDirectory = project.file('./run/client1')
             programArguments.addAll("--username", "player1")
         }
 
         client2 {
             client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
             gameDirectory = project.file('./run/client2')
             programArguments.addAll("--username", "player2")
         }
@@ -94,14 +102,14 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         gameTestServer {
             type = "gameTestServer"
             sourceSet = sourceSets.gametest
             gameDirectory = project.file('./run/gametest')
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         data {
@@ -111,14 +119,14 @@ neoForge {
 
         configureEach { run ->
             def mod = run.name == 'gameTestServer' ? "${mod_id}_gametest" : mod_id
-            run.loadedMods.set([neoForge.mods.getByName(mod)])
+            run.loadedMods.set([legacyForge.mods.getByName(mod)])
             run.systemProperty 'forge.logging.markers', 'REGISTRIES'
             run.logLevel = org.slf4j.event.Level.DEBUG
         }
     }
 }
 
-neoForge.addModdingDependenciesTo(sourceSets.gametest)
+legacyForge.addModdingDependenciesTo(sourceSets.gametest)
 
 configurations {
     runtimeClasspath.extendsFrom localRuntime
@@ -127,48 +135,52 @@ configurations {
 }
 
 dependencies {
+    // 玩家持久化附件：Forge 1.20.1 无 AttachmentType，使用固定正式版的 forgeattachment
+    modImplementation "io.zershyan:forgeattachment:${forgeattachment_version}"
     // Curios 为可选依赖：只编译其 API，不嵌入成品
-    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    compileOnly "top.theillusivec4.curios:curios-forge:${curios_version}:api"
     if (curios_dev_runtime.toBoolean()) {
-        localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+        localRuntime "top.theillusivec4.curios:curios-forge:${curios_version}"
     }
     // JEI 为可选依赖：只编译其 API，用于在锻造页显示类型配方
-    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    compileOnly "mezz.jei:jei-1.20.1-forge-api:${jei_version}"
     if (jei_dev_runtime.toBoolean()) {
-        localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+        localRuntime "mezz.jei:jei-1.20.1-forge:${jei_version}"
     }
+    // Forge 1.20.1 的 Mixin refmap 由注解处理器生成
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
-tasks.named('check') {
-    dependsOn 'runGameTestServer'
-}
+// mods.toml 占位符展开（Forge 元数据直接位于 resources 下）
+var modMetadataProps = [
+        minecraft_version      : minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        forge_version          : forge_version,
+        forge_version_range    : forge_version_range,
+        loader_version_range   : loader_version_range,
+        mod_id                 : mod_id,
+        mod_name               : mod_name,
+        mod_license            : mod_license,
+        // 包内版本号恒带 +build.<编号>，用 gradle 的 version 而非 mod_version
+        mod_version            : version,
+        mod_authors            : mod_authors,
+        mod_description        : mod_description,
+        mod_credits            : mod_credits,
+        mod_url                : mod_url,
+]
 
-var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [
-            minecraft_version      : minecraft_version,
-            minecraft_version_range: minecraft_version_range,
-            neo_version            : neo_version,
-            neo_version_range      : neo_version_range,
-            loader_version_range   : loader_version_range,
-            mod_id                 : mod_id,
-            mod_name               : mod_name,
-            mod_license            : mod_license,
-            // 包内版本号恒带 +build.<编号>，用 gradle 的 version 而非 mod_version
-            mod_version            : version,
-            mod_authors            : mod_authors,
-            mod_description        : mod_description,
-            mod_credits            : mod_credits,
-            mod_url                : mod_url,
-    ]
-    inputs.properties replaceProperties
+tasks.named('processResources', ProcessResources).configure {
+    inputs.properties modMetadataProps
     filteringCharset = 'UTF-8'
-    expand replaceProperties
-    from "src/main/templates"
-    into "build/generated/sources/modMetadata"
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand modMetadataProps
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-sourceSets.main.resources.srcDir generateModMetadata
-neoForge.ideSyncTask generateModMetadata
+tasks.named('jar', Jar).configure {
+    manifest.attributes('MixinConfigs': "${mod_id}.mixins.json")
+}
 
 // 对外发布用正式版本号，不带 +build.<编号>；置 maven_publish_release_version=false 才沿用带编号版本
 def publishReleaseVersion = (project.findProperty('maven_publish_release_version') ?: 'true').toBoolean()
@@ -186,6 +198,10 @@ publishing {
             url "file://${project.projectDir}/repo"
         }
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
 
 tasks.withType(JavaCompile).configureEach {

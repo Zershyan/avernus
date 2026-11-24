@@ -2,9 +2,9 @@ package io.zershyan.avernus.api.event;
 
 import io.zershyan.avernus.api.realm.RealmView;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.bus.api.Event;
+import net.minecraftforge.eventbus.api.Event;
 
-/** 领域事件基类，于服务端主线程在 NeoForge 游戏总线发布。 */
+/** 领域事件基类，于服务端主线程在 Forge 游戏总线发布。 */
 public abstract class RealmEvent extends Event {
     private final ServerLevel level;
     private final RealmView realm;

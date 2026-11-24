@@ -9,17 +9,17 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.registries.DeferredRegister;
 
 public final class AvernusRecipes {
     public static final DeferredRegister<RecipeSerializer<?>> REGISTER =
             DeferredRegister.create(Registries.RECIPE_SERIALIZER, Avernus.MODID);
 
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<MirrorAspectRecipe>> MIRROR_ASPECT =
+    public static final RegistryObject<RecipeSerializer<?>, RecipeSerializer<MirrorAspectRecipe>> MIRROR_ASPECT =
             REGISTER.register("mirror_aspect", () -> serializer(MirrorAspectRecipe.CODEC, MirrorAspectRecipe.STREAM_CODEC));
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<MirrorTraitRecipe>> MIRROR_TRAIT =
+    public static final RegistryObject<RecipeSerializer<?>, RecipeSerializer<MirrorTraitRecipe>> MIRROR_TRAIT =
             REGISTER.register("mirror_trait", () -> serializer(MirrorTraitRecipe.CODEC, MirrorTraitRecipe.STREAM_CODEC));
 
     private AvernusRecipes() {

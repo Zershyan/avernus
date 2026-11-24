@@ -26,8 +26,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.common.EffectCures;
-import net.neoforged.neoforge.common.NeoForgeMod;
+import net.minecraftforge.common.EffectCures;
+import net.minecraftforge.common.MinecraftForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;

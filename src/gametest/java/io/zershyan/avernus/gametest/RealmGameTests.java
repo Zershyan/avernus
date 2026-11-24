@@ -24,8 +24,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -225,13 +225,13 @@ public final class RealmGameTests {
         helper.startSequence().thenWaitUntil(() -> assertCovered(helper, realm, 7, 8, 7, 9))
                 .thenExecute(() -> {
                     try {
-                        helper.assertFalse(net.neoforged.neoforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "领域内如冒险模式，床不得放置");
+                        helper.assertFalse(net.minecraftforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "领域内如冒险模式，床不得放置");
                         helper.assertTrue(level.isEmptyBlock(first) && level.getBlockState(second).is(Blocks.SHORT_GRASS), "床尾应回滚，草不应被替换");
                         helper.assertTrue(bed.getCount() == 2, "失败不能消耗物品");
                     } finally {
                         close(helper, realm);
                     }
-                    helper.assertTrue(net.neoforged.neoforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "关境后应恢复正常双格放置");
+                    helper.assertTrue(net.minecraftforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "关境后应恢复正常双格放置");
                     helper.assertTrue(level.getBlockState(first).is(Blocks.RED_BED) && level.getBlockState(second).is(Blocks.RED_BED) && bed.getCount() == 1, "区外两半床与物品消耗应一致");
                 }).thenSucceed();
     }

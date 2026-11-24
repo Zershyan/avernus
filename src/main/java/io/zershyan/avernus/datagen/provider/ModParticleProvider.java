@@ -2,8 +2,8 @@ package io.zershyan.avernus.datagen.provider;
 
 import io.zershyan.avernus.registry.AvernusParticles;
 import net.minecraft.data.PackOutput;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
-import net.neoforged.neoforge.common.data.ParticleDescriptionProvider;
+import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraftforge.common.data.ParticleDescriptionProvider;
 
 public class ModParticleProvider extends ParticleDescriptionProvider {
     private static final int FRAMES = 4;

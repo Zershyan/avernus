@@ -17,7 +17,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,7 +36,7 @@ public final class RealmAttributeEffects {
         for (Realm realm : realms.all()) {
             if (!(level.getEntity(realm.ownerId()) instanceof LivingEntity owner) || !owner.isAlive()) continue;
             RealmAttributeEvent.Configure event = defaults(level, realm, owner);
-            NeoForge.EVENT_BUS.post(event);
+            MinecraftForge.EVENT_BUS.post(event);
             if (!event.isCanceled() && realms.get(realm.id()) == realm) configured.put(realm.id(), event);
         }
         long time = level.getGameTime();
@@ -52,7 +52,7 @@ public final class RealmAttributeEffects {
             boolean owner = realm.ownerId().equals(living.getUUID());
             var modifiers = owner ? config.getOwnerModifiers() : config.getOtherModifiers();
             var event = new RealmAttributeEvent.Apply(level, realm, config.getOwner(), living, modifiers.values());
-            NeoForge.EVENT_BUS.post(event);
+            MinecraftForge.EVENT_BUS.post(event);
             if (event.isCanceled() || !living.isAlive() || living.isRemoved() || living.isSpectator()
                     || !config.getOwner().isAlive() || !canAffect(level, config.getOwner(), living)
                     || realms.get(realm.id()) != realm
