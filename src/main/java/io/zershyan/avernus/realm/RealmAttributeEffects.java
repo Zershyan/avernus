@@ -100,7 +100,7 @@ public final class RealmAttributeEffects {
             if (current == null || current.getAmount() != amount) {
                 attribute.removeModifier(MODIFIER_ID);
                 attribute.addTransientModifier(new AttributeModifier(MODIFIER_ID, MODIFIER_NAME, amount,
-                        AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+                        AttributeModifier.Operation.MULTIPLY_TOTAL));
             }
             installed.add(entry.getKey());
         }

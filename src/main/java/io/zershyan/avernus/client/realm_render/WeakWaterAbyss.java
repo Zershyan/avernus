@@ -62,15 +62,18 @@ final class WeakWaterAbyss {
         var projection = event.getProjectionMatrix();
         float bottom = -mc.gameRenderer.getDepthFar() * (1 + 1 / Math.abs(projection.m00()) + 1 / Math.abs(projection.m11()));
         Vec3 eye = event.getCamera().getPosition();
-        var buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        var buffer = Tesselator.getInstance().getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         for (var patches : tiles.values()) for (var patch : patches) patch.emit(buffer, eye, bottom);
-        var mesh = buffer.build();
-        if (mesh == null) return;
+        var mesh = buffer.end();
+        if (mesh.isEmpty()) return;
         // 贴近边界时入口可能在近平面之前，仍须写入深度，不能露出背后的地形。
         boolean clamped = glIsEnabled(GL_DEPTH_CLAMP);
         if (!clamped) glEnable(GL_DEPTH_CLAMP);
         try {
-            shader.setDefaultUniforms(VertexFormat.Mode.QUADS, event.getModelViewMatrix(), projection, mc.getWindow());
+            shader.safeGetUniform("ModelViewMat").set(event.getPoseStack().last().pose());
+            shader.safeGetUniform("ProjMat").set(projection);
+            shader.safeGetUniform("ColorModulator").set(1.0F, 1.0F, 1.0F, 1.0F);
             shader.apply();
             BufferUploader.draw(mesh);
         } finally {
@@ -107,7 +110,7 @@ final class WeakWaterAbyss {
         }
 
         private static void vertex(VertexConsumer out, float x, float y, float z) {
-            out.addVertex(x, y, z).setColor(0xFF000000);
+            out.vertex(x, y, z).color(0xFF000000).endVertex();
         }
     }
 }

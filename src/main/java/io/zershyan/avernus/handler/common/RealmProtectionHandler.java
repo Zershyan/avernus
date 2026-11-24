@@ -39,7 +39,7 @@ public final class RealmProtectionHandler {
         var snapshots = event instanceof BlockEvent.EntityMultiPlaceEvent multi
                 ? multi.getReplacedBlockSnapshots() : List.of(event.getBlockSnapshot());
         for (var snapshot : snapshots) {
-            if (RealmProtection.blocksMutation(level, snapshot.getPos(), snapshot.getState(), snapshot.getCurrentState())) {
+            if (RealmProtection.blocksMutation(level, snapshot.getPos(), snapshot.getReplacedBlock(), snapshot.getCurrentBlock())) {
                 event.setCanceled(true);
                 return;
             }

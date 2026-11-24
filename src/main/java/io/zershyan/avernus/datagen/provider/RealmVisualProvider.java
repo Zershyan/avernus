@@ -33,7 +33,7 @@ public final class RealmVisualProvider implements DataProvider {
                 AvernusRealmAspects.INFERNAL.getId(), profile("infernal", 0xC2501A, 0xFF8A3A, 0x3A1206, 40.0F, RealmAtmosphere.EMBER, 0xFFB347),
                 AvernusRealmAspects.SILENT.getId(), profile("silent", 0x2A5AA8, 0x78AAFF, 0x0C1630, 56.0F, RealmAtmosphere.FROST, 0xCFEAFF));
         return CompletableFuture.allOf(profiles.entrySet().stream().map(entry -> DataProvider.saveStable(output,
-                RealmVisualProfile.CODEC.encodeStart(JsonOps.INSTANCE, entry.getValue()).getOrThrow(),
+                RealmVisualProfile.CODEC.encodeStart(JsonOps.INSTANCE, entry.getValue()).getOrThrow(false, error -> { }),
                 paths.json(entry.getKey()))).toArray(CompletableFuture[]::new));
     }
 

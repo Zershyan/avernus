@@ -22,7 +22,7 @@ public class AvernusEntities {
     private static RegistryObject<EntityType<MirrorEntity>> mirror() {
         return (RegistryObject<EntityType<MirrorEntity>>) (RegistryObject<?>) REGISTER.register("mirror",
                 () -> EntityType.Builder.<MirrorEntity>of(MirrorEntity::new, MobCategory.MISC)
-                        .sized(1.5F, 1.5F).eyeHeight(0.75F).noSave().noSummon().fireImmune()
+                        .sized(1.5F, 1.5F).noSave().noSummon().fireImmune()
                         .clientTrackingRange(10).updateInterval(2).build("mirror"));
     }
 
@@ -33,8 +33,8 @@ public class AvernusEntities {
 
     private static class Client {
         static void register(IEventBus modBus) {
-            modBus.addListener(EntityRenderersEvent.RegisterRenderers.class,
-                    event -> event.registerEntityRenderer(MIRROR.get(), MirrorEntityRenderer::new));
+            modBus.addListener((EntityRenderersEvent.RegisterRenderers event) ->
+                    event.registerEntityRenderer(MIRROR.get(), MirrorEntityRenderer::new));
         }
     }
 }

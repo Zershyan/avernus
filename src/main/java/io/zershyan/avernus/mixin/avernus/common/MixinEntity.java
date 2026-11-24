@@ -40,7 +40,7 @@ public abstract class MixinEntity {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void avernus$vehiclePresence(CallbackInfo ci) {
-        if ((Object) this instanceof net.minecraft.world.entity.vehicle.VehicleEntity vehicle) RealmPresenceTracker.tick(vehicle);
+        if (!((Object) this instanceof LivingEntity)) RealmPresenceTracker.tick((Entity) (Object) this);
     }
 
     @Inject(method = "checkFallDamage", at = @At("HEAD"))

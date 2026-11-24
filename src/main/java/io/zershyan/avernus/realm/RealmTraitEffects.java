@@ -81,17 +81,20 @@ public final class RealmTraitEffects {
 
     // region 自由
 
-    private static final ResourceLocation FREEDOM_MODIFIER = Avernus.id("freedom");
-
     /** 开境者站在自己领域生效的列上时获得飞行能力，离开或领域收起时撤销。 */
     private static void updateFreedom(ServerLevel level, Realm realm, boolean active) {
         if (!(level.getEntity(realm.ownerId()) instanceof Player owner)) return;
-        AttributeInstance flight = owner.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
-        if (flight == null) return;
         boolean grant = active && realm.covers(owner.getBlockX(), owner.getBlockZ(), level.getGameTime());
-        if (grant == flight.hasModifier(FREEDOM_MODIFIER)) return;
-        if (grant) flight.addTransientModifier(new AttributeModifier(FREEDOM_MODIFIER, 1.0, AttributeModifier.Operation.ADD_VALUE));
-        else flight.removeModifier(FREEDOM_MODIFIER);
+        if (grant) {
+            if (!owner.getAbilities().mayfly) {
+                owner.getAbilities().mayfly = true;
+                owner.onUpdateAbilities();
+            }
+        } else if (!owner.isCreative() && !owner.isSpectator() && owner.getAbilities().mayfly) {
+            owner.getAbilities().mayfly = false;
+            owner.getAbilities().flying = false;
+            owner.onUpdateAbilities();
+        }
     }
 
     // endregion

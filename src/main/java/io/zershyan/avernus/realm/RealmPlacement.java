@@ -2,6 +2,7 @@ package io.zershyan.avernus.realm;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -41,9 +42,7 @@ public final class RealmPlacement {
             if (transaction.denied) {
                 transaction.rollback(start);
                 stack.setCount(before.getCount());
-                var components = before.getComponents();
-                for (var type : Set.copyOf(stack.getComponents().keySet())) if (!components.has(type)) stack.remove(type);
-                stack.applyComponents(components);
+                stack.setTag(before.hasTag() ? before.getTag().copy() : null);
                 if (parent != null && parent.level == level) parent.denied = true;
             }
         }
@@ -56,8 +55,8 @@ public final class RealmPlacement {
         try {
             var snapshots = level.capturedBlockSnapshots;
             while (snapshots.size() > start) {
-                var snapshot = snapshots.removeLast();
-                snapshot.restore(snapshot.getFlags() | Block.UPDATE_CLIENTS);
+                var snapshot = snapshots.remove(snapshots.size() - 1);
+                snapshot.restore();
             }
         } finally {
             level.restoringBlockSnapshots = restoring;

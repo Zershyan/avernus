@@ -144,7 +144,7 @@ final class RealmColumns {
                 int relation = c.tile(x * SIZE, z * SIZE, SIZE);
                 if (relation < 0) continue;
                 var slices = tilesByPosition.computeIfAbsent(ChunkPos.asLong(x, z), p -> new ArrayList<>());
-                if (slices.isEmpty() || slices.getLast().partial != null) {
+                if (slices.isEmpty() || slices.get(slices.size() - 1).partial != null) {
                     slices.add(new Slice(candidate.style, relation == 1 ? null : c));
                 }
             }

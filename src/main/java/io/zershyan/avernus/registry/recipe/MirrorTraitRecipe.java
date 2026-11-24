@@ -99,7 +99,7 @@ public class MirrorTraitRecipe implements MirrorTraitRecipeView, SmithingRecipe 
     /** 添加配方的模板槽为空，不能按默认的“存在空原料”判为不完整。 */
     @Override
     public boolean isIncomplete() {
-        return material.hasNoItems();
+        return material.isEmpty();
     }
 
     @Override

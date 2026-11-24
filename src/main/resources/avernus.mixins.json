@@ -7,8 +7,9 @@
   "plugin": "io.zershyan.avernus.mixin.AvernusMixinPlugin",
   "mixins": [
     "avernus.common.MixinAbstractArrow",
-    "avernus.common.MixinAttackMemory",
     "avernus.common.MixinBlockCollisions",
+    "avernus.common.MixinZoglinTarget",
+    "avernus.common.MixinWardenTarget",
     "avernus.common.MixinBlockDecay",
     "avernus.common.MixinClipContext",
     "avernus.common.MixinCommonHooks",
@@ -41,6 +42,7 @@
     "avernus.client.MixinEntityRenderDispatcher",
     "avernus.client.MixinEntityRenderer",
     "avernus.client.MixinLevelRenderer",
+    "avernus.client.MixinRenderChunkInfo",
     "avernus.client.MixinScreenEffectRenderer",
     "avernus.client.MixinViewArea"
   ],

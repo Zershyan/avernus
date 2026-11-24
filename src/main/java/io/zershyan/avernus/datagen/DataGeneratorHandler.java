@@ -10,27 +10,29 @@ import io.zershyan.avernus.datagen.provider.ModSoundProvider;
 import io.zershyan.avernus.datagen.provider.PackMetadataProvider;
 import io.zershyan.avernus.datagen.provider.RealmShaderProvider;
 import io.zershyan.avernus.datagen.provider.RealmVisualProvider;
+import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
 import net.minecraftforge.common.data.ExistingFileHelper;
-import net.neoforged.neoforge.data.event.GatherDataEvent;
+import net.minecraftforge.data.event.GatherDataEvent;
 
 public class DataGeneratorHandler {
     public static void gatherData(GatherDataEvent event) {
+        DataGenerator generator = event.getGenerator();
+        PackOutput output = generator.getPackOutput();
         ExistingFileHelper helper = event.getExistingFileHelper();
-        PackOutput packOutput = event.getGenerator().getPackOutput();
 
-        event.createProvider(ModLangProvider::runEnUs);
-        event.createProvider(ModLangProvider::runZhCn);
-        event.createProvider(PackMetadataProvider::new);
-        event.addProvider(new ModItemModelProvider(packOutput, helper));
+        generator.addProvider(event.includeClient(), ModLangProvider.runEnUs(output));
+        generator.addProvider(event.includeClient(), ModLangProvider.runZhCn(output));
+        generator.addProvider(event.includeClient(), new PackMetadataProvider(output));
+        generator.addProvider(event.includeClient(), new ModItemModelProvider(output, helper));
         if (event.includeClient()) {
-            event.addProvider(new RealmShaderProvider(packOutput));
-            event.addProvider(new RealmVisualProvider(packOutput));
-            event.addProvider(new ModParticleProvider(packOutput, helper));
-            event.addProvider(new ModSoundProvider(packOutput, helper));
+            generator.addProvider(true, new RealmShaderProvider(output));
+            generator.addProvider(true, new RealmVisualProvider(output));
+            generator.addProvider(true, new ModParticleProvider(output, helper));
+            generator.addProvider(true, new ModSoundProvider(output, helper));
         }
-        event.addProvider(new ModRecipeProvider(packOutput, event.getLookupProvider()));
-        event.addProvider(new ModItemTagsProvider(packOutput, event.getLookupProvider(), helper));
-        event.addProvider(new CuriosSlotProvider(packOutput));
+        generator.addProvider(event.includeServer(), new ModRecipeProvider(output));
+        generator.addProvider(event.includeServer(), new ModItemTagsProvider(output, event.getLookupProvider(), helper));
+        generator.addProvider(event.includeServer(), new CuriosSlotProvider(output));
     }
 }

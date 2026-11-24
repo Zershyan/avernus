@@ -40,8 +40,8 @@ public class AvernusItems {
             .title(AvernusKeyLang.CreativeTab)
             .icon(() -> UMBRAL_MIRROR.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
-                MIRRORS_BY_ASPECT.values().forEach(output::accept);
-                SIGILS.values().forEach(output::accept);
+                MIRRORS_BY_ASPECT.values().forEach(mirror -> output.accept(mirror.get()));
+                SIGILS.values().forEach(sigil -> output.accept(sigil.get()));
             })
             .build());
 

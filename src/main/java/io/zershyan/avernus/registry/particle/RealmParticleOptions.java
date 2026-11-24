@@ -1,6 +1,7 @@
 package io.zershyan.avernus.registry.particle;
 
 import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.particles.ParticleOptions;
@@ -12,7 +13,8 @@ public record RealmParticleOptions(ParticleType<RealmParticleOptions> type, int 
     public static final ParticleOptions.Deserializer<RealmParticleOptions> DESERIALIZER =
             new ParticleOptions.Deserializer<>() {
                 @Override
-                public RealmParticleOptions fromCommand(ParticleType<RealmParticleOptions> type, StringReader reader) {
+                public RealmParticleOptions fromCommand(ParticleType<RealmParticleOptions> type, StringReader reader)
+                        throws CommandSyntaxException {
                     return new RealmParticleOptions(type, reader.readInt(), 1.0F);
                 }
 

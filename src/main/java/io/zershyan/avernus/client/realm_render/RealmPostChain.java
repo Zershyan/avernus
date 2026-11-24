@@ -117,7 +117,7 @@ final class RealmPostChain {
 
     /** 降分辨率通道：每个 n×n 块取左下像素的深度。 */
     private static void coarse(ShaderInstance shader, RealmPostTarget target, RealmPostFrame frame, RenderTarget main, int downscale) {
-        target.resize(Math.ceilDiv(main.width, downscale), Math.ceilDiv(main.height, downscale));
+        target.resize((main.width + downscale - 1) / downscale, (main.height + downscale - 1) / downscale);
         frame.apply(shader);
         shader.safeGetUniform("Downscale").set(downscale);
         shader.setSampler("DepthSampler", main.getDepthTextureId());
@@ -137,12 +137,13 @@ final class RealmPostChain {
     /** 全屏四边形，顶点即裁剪坐标。 */
     private static void draw(ShaderInstance shader) {
         RenderSystem.setShader(() -> shader);
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        builder.addVertex(-1.0F, -1.0F, 0.0F);
-        builder.addVertex(1.0F, -1.0F, 0.0F);
-        builder.addVertex(1.0F, 1.0F, 0.0F);
-        builder.addVertex(-1.0F, 1.0F, 0.0F);
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+        BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        builder.vertex(-1.0F, -1.0F, 0.0F).endVertex();
+        builder.vertex(1.0F, -1.0F, 0.0F).endVertex();
+        builder.vertex(1.0F, 1.0F, 0.0F).endVertex();
+        builder.vertex(-1.0F, 1.0F, 0.0F).endVertex();
+        BufferUploader.drawWithShader(builder.end());
     }
 
     /** 后处理前后需要原样保留的 GL 状态。 */

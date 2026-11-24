@@ -178,7 +178,7 @@ final class RealmSectionMeshes {
                 CpuLayer cpu = entry.getValue();
                 var state = cpu.data.drawState();
                 size += (long) state.vertexCount() * state.format().getVertexSize();
-                VertexBuffer vertices = new VertexBuffer();
+                VertexBuffer vertices = new VertexBuffer(VertexBuffer.Usage.STATIC);
                 vertices.bind();
                 boolean transferred = false;
                 try {

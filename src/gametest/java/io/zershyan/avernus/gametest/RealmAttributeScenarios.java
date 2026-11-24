@@ -73,9 +73,9 @@ public final class RealmAttributeScenarios {
     public static void infernalMultipliesAfterForeignModifiers(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.INFERNAL.getId(), scene -> {
             AttributeInstance attack = attribute(scene.owner(), Attributes.ATTACK_DAMAGE);
-            var add = new AttributeModifier(Avernus.id("test_add"), 2.0, AttributeModifier.Operation.ADD_VALUE);
-            var base = new AttributeModifier(Avernus.id("test_base"), 0.5, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
-            var total = new AttributeModifier(Avernus.id("test_total"), 0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            var add = new AttributeModifier(Avernus.id("test_add"), 2.0, AttributeModifier.Operation.ADDITION);
+            var base = new AttributeModifier(Avernus.id("test_base"), 0.5, AttributeModifier.Operation.MULTIPLY_BASE);
+            var total = new AttributeModifier(Avernus.id("test_total"), 0.5, AttributeModifier.Operation.MULTIPLY_TOTAL);
             attack.addTransientModifier(add);
             attack.addTransientModifier(base);
             attack.addTransientModifier(total);
@@ -508,7 +508,7 @@ public final class RealmAttributeScenarios {
     private static void assertAmount(GameTestHelper helper, LivingEntity entity, Holder<Attribute> key, double amount) {
         AttributeModifier modifier = attribute(entity, key).getModifier(MODIFIER);
         helper.assertTrue(modifier != null && Math.abs(modifier.amount() - amount) < 1.0E-9
-                && modifier.operation() == AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, "属性须采用预期的独立总乘区：" + key);
+                && modifier.operation() == AttributeModifier.Operation.MULTIPLY_TOTAL, "属性须采用预期的独立总乘区：" + key);
     }
 
     private static void assertValue(GameTestHelper helper, LivingEntity entity, Holder<Attribute> key, double expected) {

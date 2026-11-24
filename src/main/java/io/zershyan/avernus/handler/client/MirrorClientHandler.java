@@ -62,7 +62,7 @@ public final class MirrorClientHandler {
         }
         tooltip.add(AvernusKeyLang.TooltipEffects.copy().withStyle(ChatFormatting.DARK_PURPLE));
         for (ResourceLocation id : ids) {
-            RealmTrait trait = AvernusRegistries.REALM_TRAIT.get(id);
+            RealmTrait trait = AvernusRegistries.REALM_TRAIT.get().getValue(id);
             Component name = (trait != null ? trait.getName() : Component.literal(id.toString())).copy().withStyle(ChatFormatting.LIGHT_PURPLE);
             tooltip.add(detailed && trait != null
                     ? AvernusKeyLang.TooltipEffect.get(name, trait.getDescription()).withStyle(ChatFormatting.GRAY)

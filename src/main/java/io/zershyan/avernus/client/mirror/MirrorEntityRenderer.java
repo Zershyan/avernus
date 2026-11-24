@@ -115,7 +115,7 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
     private record Plain(int light) implements Paint {
         @Override
         public void apply(VertexConsumer consumer, int hidden, int baryX, int baryY) {
-            consumer.setColor(255, 255, 255, 255).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light);
+            consumer.color(255, 255, 255, 255).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light);
         }
     }
 
@@ -123,9 +123,9 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
     private record Style(int glow, int alpha, float crack, boolean outline, boolean ghost) implements Paint {
         @Override
         public void apply(VertexConsumer consumer, int hidden, int baryX, int baryY) {
-            consumer.setColor(glow >> 16 & 255, glow >> 8 & 255, glow & 255, alpha)
-                    .setUv1((int) (crack * 255.0F), (outline ? 255 : 0) + (ghost ? GHOST : 0) + hidden)
-                    .setUv2(baryX, baryY);
+            consumer.color(glow >> 16 & 255, glow >> 8 & 255, glow & 255, alpha)
+                    .overlayCoords((int) (crack * 255.0F), (outline ? 255 : 0) + (ghost ? GHOST : 0) + hidden)
+                    .uv2(baryX, baryY);
         }
     }
 
@@ -261,9 +261,9 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
 
     private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v, Vector3f normal,
                                Paint paint, int hidden, int baryX, int baryY) {
-        consumer.addVertex(pose, x, y, z);
+        consumer.vertex(pose.pose(), x, y, z);
         paint.apply(consumer, hidden, baryX, baryY);
-        consumer.setUv(u, v).setNormal(pose, normal.x, normal.y, normal.z);
+        consumer.uv(u, v).normal(pose.normal(), normal.x, normal.y, normal.z).endVertex();
     }
 
     @Override

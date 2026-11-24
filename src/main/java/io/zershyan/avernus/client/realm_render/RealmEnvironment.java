@@ -105,7 +105,7 @@ public final class RealmEnvironment {
         ClientLevel level = mc.level;
         if (level == null) return;
         RealmFxQuality quality = ClientConfig.quality();
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        float partialTick = event.getPartialTick();
         Camera camera = event.getCamera();
         Vec3 cam = camera.getPosition();
         Realm realm = current;
@@ -113,7 +113,7 @@ public final class RealmEnvironment {
         if (quality == RealmFxQuality.OFF && s <= 0.0F) return;
 
         List<RealmMoments.Moment> moments = RealmMoments.collect(level, camera.getEntity(), cam, partialTick);
-        RealmVisualProfile visual = profile != null ? profile : moments.isEmpty() ? RealmVisualProfile.FALLBACK : moments.getFirst().visual();
+        RealmVisualProfile visual = profile != null ? profile : moments.isEmpty() ? RealmVisualProfile.FALLBACK : moments.get(0).visual();
         double wave = -1.0;
         if (realm != null) {
             wave = realm.waveRadius(level.getGameTime());
@@ -124,7 +124,7 @@ public final class RealmEnvironment {
                 }
             }
         }
-        Matrix4f viewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getModelViewMatrix());
+        Matrix4f viewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getPoseStack().last().pose());
         float time = (event.getRenderTick() % TIME_PERIOD_TICKS + partialTick) / 20.0F;
         var frame = new RealmPostFrame(quality, s, realm, visual, wave, viewProj, new Matrix4f(viewProj).invert(), cam, time,
                 moments, RealmImpact.shock(moments, cam), RealmImpact.flash(moments, cam, quality));

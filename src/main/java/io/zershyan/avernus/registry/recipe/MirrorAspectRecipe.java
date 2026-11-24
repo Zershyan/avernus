@@ -8,7 +8,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
-import net.minecraft.world.Container;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -36,12 +36,12 @@ public class MirrorAspectRecipe extends ShapedRecipe {
     }
 
     @Override
-    public boolean matches(@NotNull Container container, @NotNull Level level) {
+    public boolean matches(@NotNull CraftingContainer container, @NotNull Level level) {
         return super.matches(container, level) && !container.getItem(CENTER).is(getResultItem(null).getItem());
     }
 
     @Override
-    public @NotNull ItemStack assemble(@NotNull Container container, @NotNull RegistryAccess access) {
+    public @NotNull ItemStack assemble(@NotNull CraftingContainer container, @NotNull RegistryAccess access) {
         ItemStack center = container.getItem(CENTER);
         ItemStack result = new ItemStack(getResultItem(access).getItem());
         if (center.hasTag()) result.setTag(center.getTag().copy());

@@ -149,31 +149,13 @@ final class RealmSectionMesher {
             }
             if (hidden == 0) continue;
             BlockPos fixed = pos.immutable();
-            var model = dispatcher.getBlockModel(state);
-            var data = model.getModelData(region, fixed, state, region.getModelData(fixed));
-            long seed = state.getSeed(fixed);
-            random.setSeed(seed);
             PoseStack pose = context.getPoseStack();
             pose.pushPose();
             pose.translate(fixed.getX() - origin.getX(), fixed.getY() - origin.getY(), fixed.getZ() - origin.getZ());
-            QuadLighter lighter = null;
             try {
-                for (RenderType type : model.getRenderTypes(state, random, data)) {
-                    for (Direction dir : DIRECTIONS) {
-                        if ((hidden & (1 << dir.ordinal())) == 0) continue;
-                        random.setSeed(seed);
-                        var quads = model.getQuads(state, dir, random, data, type);
-                        if (quads.isEmpty()) continue;
-                        if (lighter == null) {
-                            lighter = context.getQuadLighter(true);
-                            lighter.setup(region, fixed, state);
-                        }
-                        VertexConsumer buffer = context.getOrCreateChunkBuffer(type);
-                        for (var quad : quads) lighter.process(buffer, pose.last(), quad, OverlayTexture.NO_OVERLAY);
-                    }
-                }
+                dispatcher.renderBatched(state, fixed, region, pose,
+                        context.getOrCreateChunkBuffer(ItemBlockRenderTypes.getChunkRenderType(state)), true, random);
             } finally {
-                if (lighter != null) lighter.reset();
                 pose.popPose();
             }
         }

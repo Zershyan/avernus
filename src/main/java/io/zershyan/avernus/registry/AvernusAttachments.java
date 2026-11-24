@@ -72,12 +72,20 @@ public class AvernusAttachments {
         ForgeAttachmentApi.of(entity).ifPresent(holder -> holder.setData(type.get(), value));
     }
 
-    public static void remove(Entity entity, RegistryObject<AttachmentType<?>> type) {
-        ForgeAttachmentApi.of(entity).ifPresent(holder -> holder.removeData(type.get()));
+    public static void remove(Entity entity, RegistryObject<? extends AttachmentType<?>> type) {
+        ForgeAttachmentApi.of(entity).ifPresent(holder -> remove(holder, type.get()));
     }
 
-    public static boolean has(Entity entity, RegistryObject<AttachmentType<?>> type) {
-        return ForgeAttachmentApi.of(entity).map(holder -> holder.hasData(type.get())).orElse(false);
+    public static boolean has(Entity entity, RegistryObject<? extends AttachmentType<?>> type) {
+        return ForgeAttachmentApi.of(entity).map(holder -> has(holder, type.get())).orElse(false);
+    }
+
+    private static <T> void remove(io.zershyan.forgeattachment.attachment.IAttachmentHolder holder, AttachmentType<T> type) {
+        holder.removeData(type);
+    }
+
+    private static <T> boolean has(io.zershyan.forgeattachment.attachment.IAttachmentHolder holder, AttachmentType<T> type) {
+        return holder.hasData(type);
     }
 
     public static void doRegister(IEventBus modBus) {

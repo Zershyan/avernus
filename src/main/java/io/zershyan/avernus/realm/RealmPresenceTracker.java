@@ -43,7 +43,7 @@ public final class RealmPresenceTracker {
         if (geometry.signature() != old.checkedGeometry() || pending && !affected) escapeIfEmbedded(level, entity);
         if (entity.isInWater()) guard = false;
         else if (entered || released || guard && entity.onGround()) {
-            boolean supported = !level.noBlockCollision(entity, entity.getBoundingBox().move(0.0, -SUPPORT_PROBE, 0.0));
+            boolean supported = noCollision(level, entity, entity.getBoundingBox().move(0.0, -SUPPORT_PROBE, 0.0));
             if (supported && entity.onGround()) guard = false;
             else if ((entered || released) && !supported) guard = true;
         }
@@ -130,12 +130,12 @@ public final class RealmPresenceTracker {
     /** 保持 X/Z，只为实际嵌入方块的实体恢复位置。 */
     public static void escapeIfEmbedded(ServerLevel level, Entity entity) {
         AABB box = entity.getBoundingBox().deflate(EPSILON);
-        if (entity.isPassenger() || level.noBlockCollision(entity, box)) return;
+        if (entity.isPassenger() || noCollision(level, entity, box)) return;
         double start = entity.getY();
-        boolean aquatic = entity.getMobType() == MobType.WATER;
+        boolean aquatic = entity instanceof LivingEntity living && living.getMobType() == MobType.WATER;
         for (int y = Mth.ceil(start); y <= level.getMaxBuildHeight(); y++) {
             AABB candidate = box.move(0.0, y - start, 0.0);
-            if (!level.noBlockCollision(entity, candidate)) continue;
+            if (!noCollision(level, entity, candidate)) continue;
             if (aquatic && waterAt(level, entity, BlockPos.containing(entity.getX(), y, entity.getZ()))) {
                 restore(entity, y);
                 return;
@@ -154,13 +154,17 @@ public final class RealmPresenceTracker {
             }
         }
         double y = Math.max(start, top);
-        if (!level.noBlockCollision(entity, box.move(0.0, y - start, 0.0))) y = Math.max(y, level.getMaxBuildHeight());
+        if (!noCollision(level, entity, box.move(0.0, y - start, 0.0))) y = Math.max(y, level.getMaxBuildHeight());
         restore(entity, lifted(level, entity, box, start, y));
     }
 
     /** 落位稍微抬高，避免贴着方块顶面而再次卡入；抬高后会碰到上方方块时保持原位。 */
     private static double lifted(ServerLevel level, Entity entity, AABB box, double start, double y) {
-        return level.noBlockCollision(entity, box.move(0.0, y + ESCAPE_LIFT - start, 0.0)) ? y + ESCAPE_LIFT : y;
+        return noCollision(level, entity, box.move(0.0, y + ESCAPE_LIFT - start, 0.0)) ? y + ESCAPE_LIFT : y;
+    }
+
+    private static boolean noCollision(ServerLevel level, Entity entity, AABB box) {
+        return !level.getBlockCollisions(entity, box).iterator().hasNext();
     }
 
     private static boolean waterAt(ServerLevel level, Entity entity, BlockPos pos) {

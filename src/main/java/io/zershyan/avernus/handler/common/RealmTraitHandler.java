@@ -33,7 +33,7 @@ public final class RealmTraitHandler {
     @SubscribeEvent
     public static void onChangeTarget(LivingChangeTargetEvent event) {
         if (event.getEntity() instanceof Mob mob && !mob.level().isClientSide
-                && RealmTraitEffects.forbidsTarget(mob, event.getNewAboutToBeSetTarget())) {
+                && RealmTraitEffects.forbidsTarget(mob, event.getNewTarget())) {
             event.setCanceled(true);
         }
     }

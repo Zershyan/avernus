@@ -92,7 +92,7 @@ public final class AvernusShaders {
 
     public static void doRegister(IEventBus modBus) {
         modBus.addListener(AvernusShaders::registerReloadListeners);
-        modBus.addListener(RegisterShadersEvent.class, event -> {
+        modBus.addListener((RegisterShadersEvent event) -> {
             try {
                 register(event);
             } catch (IOException e) {

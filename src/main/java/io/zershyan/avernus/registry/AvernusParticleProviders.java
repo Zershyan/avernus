@@ -12,7 +12,7 @@ public final class AvernusParticleProviders {
     }
 
     public static void doRegister(IEventBus modBus) {
-        modBus.addListener(RegisterParticleProvidersEvent.class, AvernusParticleProviders::register);
+        modBus.addListener(AvernusParticleProviders::register);
     }
 
     private static void register(RegisterParticleProvidersEvent event) {

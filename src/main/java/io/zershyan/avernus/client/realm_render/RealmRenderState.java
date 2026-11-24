@@ -2,21 +2,19 @@ package io.zershyan.avernus.client.realm_render;
 
 import io.zershyan.avernus.realm.RealmSets;
 import io.zershyan.avernus.util.mixin.avernus.client.IMixinViewArea;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.ViewArea;
+import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
 import net.minecraft.client.renderer.chunk.RenderRegionCache;
-import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.RenderSection;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
@@ -31,8 +29,8 @@ import java.util.Set;
 public final class RealmRenderState {
     private static final RealmColumns COLUMNS = new RealmColumns();
     private static final RealmSectionMeshes MESHES = new RealmSectionMeshes();
-    private static final ObjectArrayList<RenderSection> DRAW = new ObjectArrayList<>();
-    private static final List<RenderSection> SUPPLEMENT = new ArrayList<>();
+    private static final List<ChunkRenderDispatcher.RenderChunk> DRAW = new ArrayList<>();
+    private static final List<ChunkRenderDispatcher.RenderChunk> SUPPLEMENT = new ArrayList<>();
     private static @Nullable ClientLevel world;
     private static Vec3 cameraPosition = Vec3.ZERO;
     private static boolean warming;
@@ -74,7 +72,7 @@ public final class RealmRenderState {
         MESHES.dirty(x, y, z);
     }
 
-    public static void prepare(ClientLevel level, ViewArea view, Camera camera, Frustum frustum, List<RenderSection> vanilla) {
+    public static void prepare(ClientLevel level, ViewArea view, Camera camera, Frustum frustum, List<ChunkRenderDispatcher.RenderChunk> vanilla) {
         if (world != level) {
             reset();
             world = level;
@@ -85,7 +83,7 @@ public final class RealmRenderState {
         RealmEnclosure.update(level, camera);
         boolean wasActive = active();
         COLUMNS.update(level, camera.getEntity(), SectionPos.blockToSectionCoord(center.getX()),
-                SectionPos.blockToSectionCoord(center.getZ()), view.getViewDistance());
+                SectionPos.blockToSectionCoord(center.getZ()), Minecraft.getInstance().options.getEffectiveRenderDistance());
         DRAW.clear();
         SUPPLEMENT.clear();
         long time = level.getGameTime();
@@ -112,9 +110,10 @@ public final class RealmRenderState {
         else if (wasActive || wasWarming) MESHES.reset();
     }
 
-    private static void prepareActive(ClientLevel level, ViewArea view, Frustum frustum, List<RenderSection> vanilla, RenderRegionCache regions) {
-        Set<RenderSection> existing = new HashSet<>(vanilla);
-        List<RenderSection> relevant = new ArrayList<>();
+    private static void prepareActive(ClientLevel level, ViewArea view, Frustum frustum, List<ChunkRenderDispatcher.RenderChunk> vanilla,
+                                      RenderRegionCache regions) {
+        Set<ChunkRenderDispatcher.RenderChunk> existing = new HashSet<>(vanilla);
+        List<ChunkRenderDispatcher.RenderChunk> relevant = new ArrayList<>();
         BlockPos.MutableBlockPos origin = new BlockPos.MutableBlockPos();
         IMixinViewArea lookup = (IMixinViewArea) view;
         COLUMNS.forEachCandidate(chunk -> {
@@ -127,7 +126,7 @@ public final class RealmRenderState {
                     : range == null ? level.getMinSection() - 1 : SectionPos.blockToSectionCoord(range.maxY());
             for (int sy = Math.max(level.getMinSection(), SectionPos.blockToSectionCoord(firstY)); sy <= lastY; sy++) {
                 origin.set(SectionPos.sectionToBlockCoord(x), SectionPos.sectionToBlockCoord(sy), SectionPos.sectionToBlockCoord(z));
-                RenderSection section = lookup.avernus$sectionAt(origin);
+                ChunkRenderDispatcher.RenderChunk section = lookup.avernus$sectionAt(origin);
                 if (section == null || !origin.equals(section.getOrigin()) || !frustum.isVisible(section.getBoundingBox())) continue;
                 relevant.add(section);
                 if (existing.add(section)) SUPPLEMENT.add(section);
@@ -138,11 +137,11 @@ public final class RealmRenderState {
         if (RealmEnclosure.active()) DRAW.removeIf(section -> !RealmEnclosure.keeps(section));
         if (!SUPPLEMENT.isEmpty()) DRAW.sort(Comparator.comparingDouble(RealmRenderState::distance));
         relevant.sort(Comparator.comparingDouble(RealmRenderState::distance));
-        for (RenderSection section : relevant) requestSurface(level, regions, section);
-        for (RenderSection section : relevant) requestBoundary(level, regions, section);
+        for (var section : relevant) requestSurface(level, regions, section);
+        for (var section : relevant) requestBoundary(level, regions, section);
     }
 
-    private static double distance(RenderSection section) {
+    private static double distance(ChunkRenderDispatcher.RenderChunk section) {
         var origin = section.getOrigin();
         return cameraPosition.distanceToSqr(origin.getX() + 8.0, origin.getY() + 8.0, origin.getZ() + 8.0);
     }
@@ -151,7 +150,7 @@ public final class RealmRenderState {
         return ChunkPos.asLong(SectionPos.blockToSectionCoord(origin.getX()), SectionPos.blockToSectionCoord(origin.getZ()));
     }
 
-    private static void requestSurface(ClientLevel level, RenderRegionCache regions, RenderSection section) {
+    private static void requestSurface(ClientLevel level, RenderRegionCache regions, ChunkRenderDispatcher.RenderChunk section) {
         BlockPos origin = section.getOrigin();
         long key = SectionPos.asLong(origin);
         for (var style : COLUMNS.styles(chunk(origin))) {
@@ -159,7 +158,7 @@ public final class RealmRenderState {
         }
     }
 
-    private static void requestBoundary(ClientLevel level, RenderRegionCache regions, RenderSection section) {
+    private static void requestBoundary(ClientLevel level, RenderRegionCache regions, ChunkRenderDispatcher.RenderChunk section) {
         BlockPos origin = section.getOrigin();
         var range = COLUMNS.boundary(chunk(origin));
         if (range != null && range.intersects(origin.getY())) MESHES.request(level, regions, SectionPos.asLong(origin), null, cameraPosition);
@@ -171,12 +170,12 @@ public final class RealmRenderState {
         return SectionPos.blockToSectionCoord(style.layerY()) == section || SectionPos.blockToSectionCoord(style.floorY()) == section;
     }
 
-    public static List<RenderSection> supplement() {
+    public static List<ChunkRenderDispatcher.RenderChunk> supplement() {
         return SUPPLEMENT;
     }
 
-    public static ObjectListIterator<RenderSection> iterator(RenderType layer) {
-        return DRAW.listIterator(layer == RenderType.translucent() ? DRAW.size() : 0);
+    public static List<ChunkRenderDispatcher.RenderChunk> drawList() {
+        return DRAW;
     }
 
     public static void setupShader(ShaderInstance shader) {
@@ -188,7 +187,7 @@ public final class RealmRenderState {
         RealmEnclosure.setupShader(shader, cameraPosition);
     }
 
-    public static boolean hasAdditional(RenderSection section, RenderType type) {
+    public static boolean hasAdditional(ChunkRenderDispatcher.RenderChunk section, RenderType type) {
         BlockPos origin = section.getOrigin();
         long chunk = chunk(origin), pos = SectionPos.asLong(origin);
         var range = COLUMNS.boundary(chunk);
@@ -199,19 +198,19 @@ public final class RealmRenderState {
         return false;
     }
 
-    public static void draw(RenderSection section, RenderType type, ShaderInstance shader, Runnable drawOriginal) {
+    public static void draw(ChunkRenderDispatcher.RenderChunk section, RenderType type, ShaderInstance shader, Runnable drawOriginal) {
         BlockPos origin = section.getOrigin();
         long chunk = chunk(origin), pos = SectionPos.asLong(origin);
         var uniform = shader.getUniform("RealmSectionOrigin");
         var mode = shader.getUniform("RealmMeshMode");
         var label = shader.getUniform("RealmStyle");
         if (uniform == null || mode == null || label == null) {
-            if (!section.getCompiled().isEmpty(type)) drawOriginal.run();
+            if (!section.getCompiledChunk().isEmpty(type)) drawOriginal.run();
             return;
         }
         uniform.set(origin.getX(), origin.getY(), origin.getZ());
         uniform.upload();
-        if (!section.getCompiled().isEmpty(type)) {
+        if (!section.getCompiledChunk().isEmpty(type)) {
             mode.set(COLUMNS.minimumLayer(chunk) < origin.getY() + 16 || COLUMNS.abyss.hasTile(chunk) ? 0 : -1);
             mode.upload();
             drawOriginal.run();

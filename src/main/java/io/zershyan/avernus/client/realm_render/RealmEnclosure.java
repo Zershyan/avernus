@@ -6,7 +6,7 @@ import io.zershyan.avernus.registry.entity.MirrorEntity;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.RenderSection;
+import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -50,7 +50,7 @@ public final class RealmEnclosure {
     }
 
     /** 覆盖范围外或整片沉在底板层以下的分区都不可见，整片跳过。 */
-    public static boolean keeps(RenderSection section) {
+    public static boolean keeps(ChunkRenderDispatcher.RenderChunk section) {
         Realm realm = enclosing;
         if (realm == null) return true;
         BlockPos origin = section.getOrigin();

@@ -1,18 +1,17 @@
 package io.zershyan.avernus.datagen.provider;
 
+import com.google.gson.JsonObject;
 import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
+import io.zershyan.avernus.registry.AvernusRecipes;
 import io.zershyan.avernus.registry.item.MirrorItem;
 import io.zershyan.avernus.registry.item.TraitSigilItem;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
-import io.zershyan.avernus.registry.recipe.MirrorAspectRecipe;
-import io.zershyan.avernus.registry.recipe.MirrorTraitRecipe;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
+import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.data.recipes.RecipeCategory;
-import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
@@ -20,18 +19,20 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.ItemLike;
 import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public class ModRecipeProvider extends RecipeProvider {
-    public ModRecipeProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
-        super(output, registries);
+    public ModRecipeProvider(PackOutput output) {
+        super(output);
     }
 
     @Override
-    protected void buildRecipes(RecipeOutput output) {
+    protected void buildRecipes(Consumer<FinishedRecipe> output) {
         ShapedRecipeBuilder.shaped(RecipeCategory.TOOLS, AvernusItems.UMBRAL_MIRROR.get())
                 .pattern("VDV")
                 .pattern("DSD")
@@ -59,20 +60,64 @@ public class ModRecipeProvider extends RecipeProvider {
         trait(output, AvernusRealmTraits.FREEDOM, Items.ELYTRA);
     }
 
-    private static void aspect(RecipeOutput output, MirrorItem mirror, ItemLike material) {
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(mirror);
-        output.accept(id.withPrefix("mirror/aspect/"), new MirrorAspectRecipe(Ingredient.of(material), new ItemStack(mirror)), null);
+    private static void aspect(Consumer<FinishedRecipe> output, MirrorItem mirror, ItemLike material) {
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(mirror).withPrefix("mirror/aspect/");
+        Ingredient ingredient = Ingredient.of(material);
+        output.accept(new SimpleRecipe(id, AvernusRecipes.MIRROR_ASPECT.get(), json -> {
+            json.add("material", ingredient.toJson());
+            json.add("result", item(BuiltInRegistries.ITEM.getKey(mirror)));
+        }));
     }
 
     /** 原版材料一比一合成印记，印记在锻造台增删境印。 */
-    private static void trait(RecipeOutput output, RegistryObject<RealmTrait, RealmTrait> trait, ItemLike material) {
+    private static void trait(Consumer<FinishedRecipe> output, RegistryObject<RealmTrait> trait, ItemLike material) {
         TraitSigilItem sigil = AvernusItems.SIGILS.get(trait).get();
         ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, sigil)
                 .requires(material)
                 .unlockedBy("has_material", has(material))
                 .save(output);
+        Ingredient ingredient = Ingredient.of(sigil);
         String path = trait.getId().getPath();
-        output.accept(Avernus.id("mirror/trait/add_" + path), new MirrorTraitRecipe(trait.getId(), Ingredient.of(sigil), false), null);
-        output.accept(Avernus.id("mirror/trait/remove_" + path), new MirrorTraitRecipe(trait.getId(), Ingredient.of(sigil), true), null);
+        for (boolean remove : new boolean[]{false, true}) {
+            ResourceLocation id = Avernus.id("mirror/trait/" + (remove ? "remove_" : "add_") + path);
+            output.accept(new SimpleRecipe(id, AvernusRecipes.MIRROR_TRAIT.get(), json -> {
+                json.addProperty("trait", trait.getId().toString());
+                json.add("material", ingredient.toJson());
+                if (remove) json.addProperty("remove", true);
+            }));
+        }
+    }
+
+    private static JsonObject item(ResourceLocation id) {
+        JsonObject json = new JsonObject();
+        json.addProperty("item", id.toString());
+        return json;
+    }
+
+    private record SimpleRecipe(ResourceLocation id, RecipeSerializer<?> type, Consumer<JsonObject> data) implements FinishedRecipe {
+        @Override
+        public void serializeRecipeData(JsonObject json) {
+            data.accept(json);
+        }
+
+        @Override
+        public ResourceLocation getId() {
+            return id;
+        }
+
+        @Override
+        public RecipeSerializer<?> getType() {
+            return type;
+        }
+
+        @Override
+        public @Nullable JsonObject serializeAdvancement() {
+            return null;
+        }
+
+        @Override
+        public @Nullable ResourceLocation getAdvancementId() {
+            return null;
+        }
     }
 }
