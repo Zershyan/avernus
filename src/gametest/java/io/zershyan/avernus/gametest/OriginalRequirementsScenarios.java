@@ -54,6 +54,7 @@ public final class OriginalRequirementsScenarios {
                     try {
                         var player = testPlayer(helper);
                         var charge = new ItemStack(Items.FIRE_CHARGE, 3);
+                        player.setItemInHand(InteractionHand.MAIN_HAND, charge);
                         var hit = new BlockHitResult(Vec3.atCenterOf(target), Direction.UP, target, false);
                         var use = level.getBlockState(target).use(level, player, InteractionHand.MAIN_HAND, hit);
                         helper.assertTrue(use == InteractionResult.FAIL && charge.getCount() == 3, "受保护 TNT 不应消耗引燃物");
