@@ -78,7 +78,6 @@ public final class Realm implements RealmView {
     private final double maxWaveRadius;
 
     private volatile Motion motion;
-    private boolean shatterSoundPlayed;
 
     public Realm(Snapshot state, MirrorForms.Resolved resolved) {
         this.id = state.id;
@@ -203,7 +202,7 @@ public final class Realm implements RealmView {
     }
 
     /**
-     * 几何对该主体是否生效：脚底已落到境面层以下的主体留在真实世界（由平等类型负责抬升），
+     * 几何对该主体是否生效：脚底已落到境面层以下的主体留在真实世界（由平等境印负责抬升），
      * 其余按隔绝规则判定。
      */
     public boolean geometryAppliesTo(@Nullable Entity subject) {
@@ -253,12 +252,6 @@ public final class Realm implements RealmView {
         Motion old = motion;
         if (old.closeTime() >= 0L) return false;
         motion = new Motion(old.revision() + 1, gameTime, old.centerX(), old.centerZ(), old.chest(), old.headY(), old.teleportSeq());
-        return true;
-    }
-
-    public boolean shouldPlayShatter(long gameTime) {
-        if (shatterSoundPlayed || gameTime < shatterTime() || !shatters()) return false;
-        shatterSoundPlayed = true;
         return true;
     }
 

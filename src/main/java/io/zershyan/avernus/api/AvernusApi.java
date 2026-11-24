@@ -14,6 +14,7 @@ import io.zershyan.avernus.registry.data_component.MirrorTraits;
 import io.zershyan.avernus.registry.item.MirrorItem;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -60,6 +61,19 @@ public final class AvernusApi {
     /** 该列已覆盖的最新领域视图，无覆盖时返回 null，不区分观察者。 */
     public static @Nullable RealmView realmAt(Level level, int x, int z) {
         return RealmSets.of(level).effectAt(x, z, level.getGameTime());
+    }
+
+    /** 实体当前适用的最新境；尊重覆盖、境面高度与隔绝境印，无境返回 null，客户端只含已同步领域。 */
+    public static @Nullable RealmView realmAt(Entity entity) {
+        if (entity.isRemoved()) return null;
+        Level level = entity.level();
+        return RealmSets.of(level).geometryAt(entity, entity.getBlockX(), entity.getBlockZ(), level.getGameTime());
+    }
+
+    /** 实体当前境的境相 ID（含第三方境相），无境返回 null；友军免疫属性不影响所在境查询。 */
+    public static @Nullable ResourceLocation aspectAt(Entity entity) {
+        RealmView realm = realmAt(entity);
+        return realm == null ? null : realm.aspectId();
     }
 
     /** 剩余冷却 tick；无需冷却时返回 0。 */

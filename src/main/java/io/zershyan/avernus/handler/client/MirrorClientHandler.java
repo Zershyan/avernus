@@ -1,12 +1,12 @@
 package io.zershyan.avernus.handler.client;
 
 import io.zershyan.avernus.api.realm.MirrorForm;
+import io.zershyan.avernus.compat.curios.registry.CuriosKeyMappings;
+import io.zershyan.avernus.compat.curios.registry.CuriosToggleMirrorPacket;
 import io.zershyan.avernus.datagen.lang.AvernusKeyLang;
 import io.zershyan.avernus.realm.MirrorForms;
-import io.zershyan.avernus.registry.AvernusKeyMappings;
 import io.zershyan.avernus.registry.AvernusRegistries;
 import io.zershyan.avernus.registry.item.MirrorItem;
-import io.zershyan.avernus.registry.packet.ToggleWornMirrorPacket;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
@@ -28,11 +28,11 @@ public final class MirrorClientHandler {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        KeyMapping key = AvernusKeyMappings.toggleRealm();
+        KeyMapping key = CuriosKeyMappings.toggleRealm();
         if (key == null || Minecraft.getInstance().player == null) return;
         boolean pressed = false;
         while (key.consumeClick()) pressed = true;
-        if (pressed) PacketDistributor.sendToServer(new ToggleWornMirrorPacket());
+        if (pressed) PacketDistributor.sendToServer(new CuriosToggleMirrorPacket());
     }
 
     @SubscribeEvent
@@ -71,7 +71,7 @@ public final class MirrorClientHandler {
 
     private static void usage(List<Component> tooltip) {
         tooltip.add(AvernusKeyLang.TooltipUse.copy().withStyle(ChatFormatting.GRAY));
-        KeyMapping key = AvernusKeyMappings.toggleRealm();
+        KeyMapping key = CuriosKeyMappings.toggleRealm();
         if (key != null) {
             Component bound = key.isUnbound() ? AvernusKeyLang.TooltipUnbound.copy() : key.getTranslatedKeyMessage();
             tooltip.add(AvernusKeyLang.TooltipCurioKey.get(bound).withStyle(ChatFormatting.GRAY));

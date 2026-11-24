@@ -12,7 +12,7 @@ import net.minecraft.world.item.TooltipFlag;
 import java.util.List;
 import java.util.function.Supplier;
 
-/** 类型印记：锻造台中把对应类型刻入镜子的材料。 */
+/** 境印：锻造台中把对应规则刻入镜子的材料。 */
 public class TraitSigilItem extends Item {
     private final Supplier<? extends RealmTrait> trait;
 

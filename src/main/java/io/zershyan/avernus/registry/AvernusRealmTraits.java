@@ -7,7 +7,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/** 内置类型条目。 */
+/** 内置境印条目；保留既有注册 ID 与第三方扩展入口。 */
 public class AvernusRealmTraits {
     public static final DeferredRegister<RealmTrait> REGISTER =
             DeferredRegister.create(AvernusRegistries.REALM_TRAIT, Avernus.MODID);

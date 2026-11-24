@@ -2,6 +2,7 @@ package io.zershyan.avernus.registry;
 
 import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.registry.attachment.IllusionPermits;
+import io.zershyan.avernus.registry.attachment.RealmAttributes;
 import io.zershyan.avernus.registry.attachment.RealmCooldown;
 import io.zershyan.avernus.registry.attachment.RealmPresence;
 import net.neoforged.bus.api.IEventBus;
@@ -32,6 +33,11 @@ public class AvernusAttachments {
     /** 实体当前所处的有效领域与待消耗的首次落地保护，仅存在于内存。 */
     public static final Supplier<AttachmentType<RealmPresence>> REALM_PRESENCE = REGISTER.register("realm_presence", () -> AttachmentType
             .builder(() -> RealmPresence.NONE)
+            .build());
+
+    /** 境相临时属性的来源与清理范围，不存档、不复制给重生实体。 */
+    public static final Supplier<AttachmentType<RealmAttributes>> REALM_ATTRIBUTES = REGISTER.register("realm_attributes", () -> AttachmentType
+            .builder(() -> RealmAttributes.NONE)
             .build());
 
     /** 当前开启的领域尚未结算冷却；结算时即清除，不等待收束动画结束。 */

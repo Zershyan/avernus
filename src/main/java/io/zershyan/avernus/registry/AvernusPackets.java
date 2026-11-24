@@ -1,11 +1,11 @@
 package io.zershyan.avernus.registry;
 
 import io.zershyan.avernus.Avernus;
+import io.zershyan.avernus.compat.AvernusCompatFactory;
 import io.zershyan.avernus.registry.packet.RealmMotionPacket;
 import io.zershyan.avernus.registry.packet.RealmRemovePacket;
 import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
 import io.zershyan.avernus.registry.packet.RealmUpdatePacket;
-import io.zershyan.avernus.registry.packet.ToggleWornMirrorPacket;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -24,8 +24,8 @@ public final class AvernusPackets {
         registrar.playToClient(RealmUpdatePacket.TYPE, RealmUpdatePacket.STREAM_CODEC, RealmUpdatePacket::handle);
         registrar.playToClient(RealmRemovePacket.TYPE, RealmRemovePacket.STREAM_CODEC, RealmRemovePacket::handle);
         registrar.playToClient(RealmMotionPacket.TYPE, RealmMotionPacket.STREAM_CODEC, RealmMotionPacket::handle);
-        registrar.playToServer(ToggleWornMirrorPacket.TYPE, ToggleWornMirrorPacket.STREAM_CODEC, ToggleWornMirrorPacket::handle);
         registrar.playToClient(RealmSnapshotPacket.TYPE, RealmSnapshotPacket.STREAM_CODEC, RealmSnapshotPacket::handle);
+        AvernusCompatFactory.registerNetwork(registrar);
     }
 
     public static void doRegister(IEventBus modBus) {

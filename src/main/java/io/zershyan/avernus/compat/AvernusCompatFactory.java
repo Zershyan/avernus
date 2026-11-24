@@ -2,11 +2,30 @@ package io.zershyan.avernus.compat;
 
 import io.zershyan.avernus.compat.curios.CuriosCompat;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+import java.util.HashSet;
+import java.util.Set;
+
+/** 兼容工厂：持有全部兼容实现，由主类与网络注册处统一触发。 */
 public final class AvernusCompatFactory {
-    public static final CuriosCompat CURIOS = new CuriosCompat();
+    private static final Set<ICompatUtils> COMPAT = new HashSet<>();
 
-    public static void doRegister(IEventBus modBus) {
-        CURIOS.testLoadedAndRun(() -> CURIOS.register(modBus));
+    public static final CuriosCompat CURIOS = addCompat(new CuriosCompat());
+
+    private AvernusCompatFactory() {
+    }
+
+    private static <T extends ICompatUtils> T addCompat(T utils) {
+        if (COMPAT.add(utils)) return utils;
+        throw new IllegalStateException("兼容实现重复注册：" + utils.getClass().getName());
+    }
+
+    public static void register(IEventBus forgeBus, IEventBus modBus) {
+        COMPAT.forEach(utils -> utils.initial(forgeBus, modBus));
+    }
+
+    public static void registerNetwork(PayloadRegistrar registrar) {
+        COMPAT.forEach(utils -> utils.initNetwork(registrar));
     }
 }

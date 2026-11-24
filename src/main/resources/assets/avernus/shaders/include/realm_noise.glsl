@@ -100,3 +100,19 @@ float realm_fbm3(sampler2D noise, vec3 p, int octaves) {
     }
     return sum;
 }
+
+// 带限 fbm：footprint 为一个采样间距跨过的首倍频噪声格数，跨度超过约一格的倍频以均值代替，免得稀疏采样把细节混叠成纹路。
+float realm_fbm3_lod(sampler2D noise, vec3 p, int octaves, float footprint) {
+    float sum = 0.0;
+    float amp = 0.5;
+    for (int i = 0; i < 5; i++) {
+        if (i >= octaves) break;
+        float keep = clamp(1.5 - footprint, 0.0, 1.0);
+        if (keep > 0.0) sum += amp * mix(0.5, realm_noise3(noise, p), keep);
+        else sum += amp * 0.5;
+        p = p * 2.03 + vec3(11.7, 5.3, 3.1);
+        footprint *= 2.03;
+        amp *= 0.5;
+    }
+    return sum;
+}

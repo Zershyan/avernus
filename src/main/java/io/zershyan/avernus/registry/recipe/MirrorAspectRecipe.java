@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
-/** 工作台切换境相：中心任意镜子，周围八格同种材料，产出另一境相的镜子并保留类型、名字等全部组件。 */
+/** 工作台切换境相：中心任意镜子，周围八格同种材料，产出另一境相的镜子并保留境印、名字等全部组件。 */
 public class MirrorAspectRecipe extends ShapedRecipe {
     private static final int CENTER = 4;
 

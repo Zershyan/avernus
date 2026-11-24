@@ -4,6 +4,7 @@ import com.mojang.serialization.JsonOps;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.zershyan.avernus.api.AvernusApi;
+import io.zershyan.avernus.api.event.RealmAttributeEvent;
 import io.zershyan.avernus.api.event.RealmEvent;
 import io.zershyan.avernus.api.realm.MirrorForm;
 import io.zershyan.avernus.api.realm.RealmPhase;
@@ -48,7 +49,7 @@ public final class ApiAcceptanceScenarios {
     @GameTest(template = "empty", batch = "api_signatures")
     public static void publicSignaturesDoNotExposeInternals(GameTestHelper helper) {
         for (Class<?> api : List.of(AvernusApi.class, MirrorForm.class, RealmView.class, RealmResult.class,
-                RealmPhase.class, RealmEvent.class, MirrorTraitRecipeView.class)) {
+                RealmPhase.class, RealmEvent.class, RealmAttributeEvent.class, MirrorTraitRecipeView.class)) {
             checkSignatures(helper, api);
         }
         helper.succeed();

@@ -28,12 +28,12 @@ public class AvernusKeyLang extends AvernusLang {
             "shatter it, and the world beneath your feet is rewritten in its likeness.",
             "击碎它，脚下的世界便照它的模样重写。");
     public static final MutableComponent TooltipHint = entry(TOOLTIP + "hint",
-            "Hold Ctrl: effect details · Shift: aspect · Alt: usage",
-            "按住 Ctrl 查看效果详情 · Shift 查看境相 · Alt 查看用法");
+            "Hold Ctrl: sigil details · Shift: aspect · Alt: usage",
+            "按住 Ctrl 查看境印详情 · Shift 查看境相 · Alt 查看用法");
     public static final LazyComponent TooltipAspect = entryLazy(TOOLTIP + "aspect", "Aspect: %s", "境相：%s");
-    public static final MutableComponent TooltipEffects = entry(TOOLTIP + "effects", "Special effects:", "特殊效果：");
+    public static final MutableComponent TooltipEffects = entry(TOOLTIP + "effects", "Realm sigils:", "境印：");
     public static final LazyComponent TooltipEffect = entryLazy(TOOLTIP + "effect", " %s: %s", " %s：%s");
-    public static final MutableComponent TooltipNoEffects = entry(TOOLTIP + "no_effects", "No special effects", "无特殊效果");
+    public static final MutableComponent TooltipNoEffects = entry(TOOLTIP + "no_effects", "No realm sigils", "未刻入境印");
     public static final MutableComponent TooltipInvalidForm = entry(TOOLTIP + "invalid_form",
             "Invalid form: unknown or conflicting entries", "形态无效：包含未知或互斥的条目");
     public static final MutableComponent TooltipUse = entry(TOOLTIP + "use",

@@ -112,7 +112,6 @@ public final class RealmManager {
         startCooldown(level, realm);
         if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) realm.moveAnchor(chestOf(owner), headY(owner), false);
         RealmSync.tick(level, RealmSets.of(level));
-        if (realm.shatters()) play(level, realm.shatterPoint(), AvernusSounds.CONTRACT.get());
         NeoForge.EVENT_BUS.post(new RealmEvent.Closing(level, realm));
         return true;
     }
@@ -140,6 +139,7 @@ public final class RealmManager {
         }
         RealmNavigation.remove(level, realm);
         RealmTraitEffects.release(level, realm);
+        RealmAttributeEffects.release(level, realm);
         realm.aspect().onRealmClosed(realm);
         realm.traits().forEach(trait -> trait.onRealmClosed(realm));
         RealmSync.remove(level, realm);
@@ -169,16 +169,13 @@ public final class RealmManager {
                 snap = realm.eternal() && chest.distanceToSqr(realm.motion().chest()) > TELEPORT_DISTANCE_SQR;
                 realm.moveAnchor(chest, headY(owner), snap);
             }
-            if (realm.shouldPlayShatter(time)) {
-                play(level, realm.shatterPoint(), AvernusSounds.SHATTER.get());
-                play(level, realm.shatterPoint(), AvernusSounds.EXPAND.get());
-            }
             ensureMirror(level, realm);
             RealmNavigation.update(level, realm, time, snap);
             RealmTraitEffects.tick(level, realm);
             realm.aspect().tickRealm(realm);
             for (RealmTrait trait : realm.traits()) trait.tickRealm(realm);
         }
+        RealmAttributeEffects.tick(level);
         RealmSync.tick(level, set);
     }
 

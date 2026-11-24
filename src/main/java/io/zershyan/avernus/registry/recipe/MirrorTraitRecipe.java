@@ -27,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.Optional;
 
-/** 锻造台增删类型：添加时模板槽留空，删除时模板槽放羽毛；附加槽为该类型的印记。 */
+/** 锻造台增删境印：添加时模板槽留空，删除时模板槽放羽毛；附加槽为该境印的印记。 */
 public class MirrorTraitRecipe implements MirrorTraitRecipeView {
     private final ResourceLocation trait;
     private final Ingredient material;

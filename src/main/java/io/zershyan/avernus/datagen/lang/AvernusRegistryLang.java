@@ -19,11 +19,11 @@ public class AvernusRegistryLang extends AvernusLang {
         addFinalEntry(AvernusItems.MIRRORS_BY_ASPECT.get(holder).get(), "Mirror of Avernus", "阿维尔诺之镜");
     }
 
-    /** 类型名、作用说明与对应印记的名称。 */
+    /** 境印名称、作用说明与对应刻印材料的名称。 */
     private void trait(DeferredHolder<RealmTrait, RealmTrait> holder, String enUs, String zhCn, String descEn, String descZh) {
-        addFinalEntry(RealmTrait.languageKey(holder.getId()), enUs, zhCn);
+        addFinalEntry(RealmTrait.languageKey(holder.getId()), enUs + " Sigil", zhCn + "境印");
         addFinalEntry(RealmTrait.descriptionKey(holder.getId()), descEn, descZh);
-        addFinalEntry(AvernusItems.SIGILS.get(holder).get(), "Sigil of " + enUs, zhCn + "之印");
+        addFinalEntry(AvernusItems.SIGILS.get(holder).get(), enUs + " Sigil", zhCn + "境印");
     }
 
     private void subtitle(DeferredHolder<SoundEvent, SoundEvent> sound, String enUs, String zhCn) {
@@ -41,11 +41,11 @@ public class AvernusRegistryLang extends AvernusLang {
         addFinalEntry(AvernusEntities.MIRROR.get(), "Mirror of Avernus", "阿维尔诺之镜");
 
         aspect(AvernusRealmAspects.UMBRAL, "Umbral", "幽冥",
-                "Dusk without end; shadows pool where the ground once stood.", "永不散去的暮色，影子沉积在大地曾在之处。");
+                "Grants the owner greater movement speed and jump strength; slows foes inside.", "提高开境者的移速与跳跃强度，降低境内敌方生物的移速。");
         aspect(AvernusRealmAspects.SILENT, "Silent", "寂静",
-                "Frost and stillness; even the wind forgets how to speak.", "霜与静止，连风也忘了如何出声。");
+                "Strengthens the owner's armor and armor toughness; weakens those of foes inside.", "提高开境者的护甲值与盔甲韧性，降低境内敌方生物的护甲值与盔甲韧性。");
         aspect(AvernusRealmAspects.INFERNAL, "Infernal", "炼狱",
-                "Embers drift upward through a sky that burns without fire.", "余烬向上飘去，天空无火而燃。");
+                "Increases the owner's attack damage; reduces that of foes inside.", "提高开境者的攻击伤害，降低境内敌方生物的攻击伤害。");
 
         trait(AvernusRealmTraits.ISOLATION, "Isolation", "隔绝",
                 "The rewritten ground exists for the owner alone", "重写的地形只对开境者生效");
@@ -57,7 +57,7 @@ public class AvernusRegistryLang extends AvernusLang {
                 "Saves the owner from a fatal blow once, at the cost of the realm", "致命伤时救回开境者一次，领域随之破碎");
         trait(AvernusRealmTraits.WEAK_WATER, "Weak Water", "弱水",
                 "The whole surface turns to weak water over a bottomless dark", "境面整片化为弱水，水下深不见底");
-        trait(AvernusRealmTraits.BOUNDLESS, "Boundless", "无垠",
+        trait(AvernusRealmTraits.BOUNDLESS, "Boundless", "无限",
                 "The surface is sealed whole, without a single hole", "境面完整封合，不留一处空洞");
         trait(AvernusRealmTraits.UNREALITY, "Unreality", "虚妄",
                 "The owner is immune to damage with no attacker", "开境者免疫没有攻击者的伤害");

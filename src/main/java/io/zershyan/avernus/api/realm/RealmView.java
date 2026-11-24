@@ -7,7 +7,7 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 import java.util.UUID;
 
-/** 领域的只读视图；坐标均为方块坐标，境相和类型只暴露稳定资源 ID。 */
+/** 领域的只读视图；坐标均为方块坐标，境相和境印只暴露稳定资源 ID。 */
 public interface RealmView {
     UUID id();
 
@@ -17,7 +17,7 @@ public interface RealmView {
 
     ResourceLocation aspectId();
 
-    /** 去重排序的不可修改类型 ID 列表。 */
+    /** 去重排序的不可修改境印 ID 列表。 */
     List<ResourceLocation> traitIds();
 
     default boolean hasTrait(ResourceLocation trait) {

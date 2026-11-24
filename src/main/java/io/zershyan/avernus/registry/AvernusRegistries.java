@@ -9,7 +9,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
 import net.neoforged.neoforge.registries.RegistryBuilder;
 
-/** 自定义注册表声明：境相与类型，第三方可通过对应注册表键注册条目。 */
+/** 自定义注册表声明：境相与境印，第三方可通过对应注册表键注册条目。 */
 public class AvernusRegistries {
     public static final ResourceKey<Registry<RealmAspect>> REALM_ASPECT_KEY =
             ResourceKey.createRegistryKey(Avernus.id("realm_aspect"));

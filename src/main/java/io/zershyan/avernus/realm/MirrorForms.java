@@ -25,7 +25,7 @@ public final class MirrorForms {
     private MirrorForms() {
     }
 
-    /** 解析为注册对象；存在未注册 ID、超界或类型冲突时返回空。 */
+    /** 解析为注册对象；存在未注册 ID、超界或境印冲突时返回空。 */
     public static Optional<Resolved> resolve(MirrorForm form) {
         if (form.traits().size() > MirrorForm.MAX_TRAITS) return Optional.empty();
         RealmAspect resolvedAspect = AvernusRegistries.REALM_ASPECT.get(form.aspect());
@@ -39,7 +39,7 @@ public final class MirrorForms {
         return findConflict(resolvedTraits) == null ? Optional.of(new Resolved(resolvedAspect, Set.copyOf(resolvedTraits))) : Optional.empty();
     }
 
-    /** 返回集合中首个与他者冲突的类型；双向检查。 */
+    /** 返回集合中首个与他者冲突的境印；双向检查。 */
     private static @Nullable RealmTrait findConflict(Set<RealmTrait> traits) {
         for (RealmTrait a : traits) {
             for (RealmTrait b : traits) {

@@ -5,6 +5,7 @@ import io.zershyan.avernus.client.particle.RealmParticles;
 import io.zershyan.avernus.client.realm_render.RealmEnvironment;
 import io.zershyan.avernus.client.realm_render.RealmImpact;
 import io.zershyan.avernus.client.realm_render.RealmRenderState;
+import io.zershyan.avernus.client.sound.RealmSounds;
 import io.zershyan.avernus.realm.RealmSets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -16,7 +17,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 
-/** 客户端领域渲染的游戏事件：网格重建、附加几何、镜子演出、粒子、环境后处理与退出清理。 */
+/** 客户端领域渲染的游戏事件：网格重建、附加几何、镜子演出、粒子、领域音效、环境后处理与退出清理。 */
 public final class RealmRenderHandler {
     private RealmRenderHandler() {
     }
@@ -26,6 +27,7 @@ public final class RealmRenderHandler {
         RealmEnvironment.tick();
         MirrorAnchors.tick();
         RealmParticles.tick();
+        RealmSounds.tick();
     }
 
     @SubscribeEvent
@@ -79,5 +81,6 @@ public final class RealmRenderHandler {
         RealmEnvironment.close();
         MirrorAnchors.reset();
         RealmParticles.reset();
+        RealmSounds.reset();
     }
 }

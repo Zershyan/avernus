@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
-/** 镜子物品上附加的类型 ID：去重排序后保存稳定资源 ID，境相由物品本身决定。 */
+/** 镜子物品上附加的境印 ID：去重排序后保存稳定资源 ID，境相由物品本身决定。 */
 public record MirrorTraits(List<ResourceLocation> ids) {
     public static final int MAX = MirrorForm.MAX_TRAITS;
     public static final MirrorTraits EMPTY = new MirrorTraits(List.of());

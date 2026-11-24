@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-/** 可选 JEI 兼容：类型锻造配方显示在原版锻造页；未安装 JEI 时不会加载。 */
+/** 可选 JEI 兼容：境印锻造配方显示在原版锻造页；未安装 JEI 时不会加载。 */
 @JeiPlugin
 public final class AvernusJeiPlugin implements IModPlugin {
     @Override
@@ -49,7 +49,7 @@ public final class AvernusJeiPlugin implements IModPlugin {
             ingredients.addItemStacks(mirrors(recipe, !recipe.remove()));
         }
 
-        /** 每个境相一面镜子，按需带上该类型；底座与产物顺序一致，轮播时一一对应。 */
+        /** 每个境相一面镜子，按需带上该境印；底座与产物顺序一致，轮播时一一对应。 */
         private static List<ItemStack> mirrors(MirrorTraitRecipeView recipe, boolean withTrait) {
             return AvernusApi.mirrorItems().stream().map(mirror -> {
                 ItemStack stack = new ItemStack(mirror);

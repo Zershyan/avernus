@@ -8,11 +8,11 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * 类型：叠加在境相上的规则。普通可扩展类，第三方可继承并覆写钩子与冲突声明。
+ * 境印：叠加在境相上的规则。普通可扩展类，第三方可继承并覆写钩子与冲突声明。
  */
 public class RealmTrait {
 
-    /** 声明与另一类型互斥；校验时双向检查，任一方声明即视为冲突。 */
+    /** 声明与另一境印互斥；校验时双向检查，任一方声明即视为冲突。 */
     public boolean conflictsWith(RealmTrait other) {
         return false;
     }

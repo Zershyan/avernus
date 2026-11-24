@@ -4,7 +4,7 @@ import io.zershyan.avernus.realm.RealmCooldowns;
 import io.zershyan.avernus.realm.RealmManager;
 import io.zershyan.avernus.realm.RealmSets;
 import io.zershyan.avernus.realm.RealmSync;
-import io.zershyan.avernus.registry.packet.ToggleWornMirrorPacket;
+import io.zershyan.avernus.compat.curios.registry.CuriosToggleMirrorPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -45,7 +45,7 @@ public final class RealmLifecycleHandler {
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             RealmManager.emergencyCloseOwned(player.server, player.getUUID());
-            ToggleWornMirrorPacket.forget(player.getUUID());
+            CuriosToggleMirrorPacket.forget(player.getUUID());
             RealmSync.forget(player.getUUID());
         }
     }

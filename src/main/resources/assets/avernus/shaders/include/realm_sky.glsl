@@ -46,8 +46,8 @@ vec3 realm_sky(sampler2D noise, vec3 dir, int atmosphere, vec3 tint, vec3 glow, 
         vec3 color = mix(mix(fog, tint, 0.18) * 1.3, fog * 0.35, smoothstep(-0.05, 0.75, up));
         vec3 axis = normalize(vec3(0.35, 0.25, 1.0));
         float galaxy = exp(-pow(dot(dir, axis), 2.0) * 22.0);
-        vec2 gp = vec2(atan(dir.x, dir.z) * 3.0, dir.y * 6.0);
-        color += mix(tint, glow, 0.5) * galaxy * (0.25 + 0.5 * realm_tfbm(noise, gp, octaves)) * 0.45;
+        // 球面上直接取 3D 噪声：按方位角取样会在正北首尾相接处留下一道竖缝
+        color += mix(tint, glow, 0.5) * galaxy * (0.25 + 0.5 * realm_fbm3(noise, dir * 4.0, octaves)) * 0.45;
         color += glow * realm_stars(dir, 140.0, 0.18, time, 1.0, pixel) * (0.6 + galaxy) * smoothstep(-0.02, 0.2, up);
         color += mix(glow, tint, 0.4) * realm_aurora(noise, dir, 0.55, time * 0.6, octaves) * 0.55;
         color += tint * horizon * 0.12;

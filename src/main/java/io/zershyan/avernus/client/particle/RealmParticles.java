@@ -16,7 +16,6 @@ import net.minecraft.util.FastColor;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -33,18 +32,6 @@ public final class RealmParticles {
     private static final Set<UUID> BURST = new HashSet<>();
 
     private RealmParticles() {
-    }
-
-    public static void registerProviders(RegisterParticleProvidersEvent event) {
-        register(event, AvernusParticles.WISP.get(), RealmParticle.Kind.WISP);
-        register(event, AvernusParticles.EMBER.get(), RealmParticle.Kind.EMBER);
-        register(event, AvernusParticles.FROST.get(), RealmParticle.Kind.FROST);
-        register(event, AvernusParticles.SPARK.get(), RealmParticle.Kind.SPARK);
-        register(event, AvernusParticles.FLOCK.get(), RealmParticle.Kind.FLOCK);
-    }
-
-    private static void register(RegisterParticleProvidersEvent event, ParticleType<ColorParticleOption> type, RealmParticle.Kind kind) {
-        event.registerSpriteSet(type, sprites -> new RealmParticle.Provider(kind, sprites));
     }
 
     public static void tick() {

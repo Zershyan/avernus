@@ -3,13 +3,23 @@ package io.zershyan.avernus.registry.config;
 import io.zershyan.avernus.datagen.lang.AvernusConfigLang;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-/** 服务端玩法配置；新开领域读取当时快照，热重载不改动已开启的领域。 */
+/** 服务端玩法配置；半径与演出在开境时冻结，境相属性按当前配置实时计算。 */
 public class ServerConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
     public static final ModConfigSpec SPEC;
 
     public static final ModConfigSpec.IntValue REALM_RADIUS;
     public static final ModConfigSpec.IntValue CLOSE_COOLDOWN_TICKS;
+
+    public static final ModConfigSpec.DoubleValue UMBRAL_OWNER_SPEED_BONUS;
+    public static final ModConfigSpec.DoubleValue UMBRAL_OWNER_JUMP_BONUS;
+    public static final ModConfigSpec.DoubleValue UMBRAL_OTHER_SPEED_PENALTY;
+    public static final ModConfigSpec.DoubleValue INFERNAL_OWNER_ATTACK_BONUS;
+    public static final ModConfigSpec.DoubleValue INFERNAL_OTHER_ATTACK_PENALTY;
+    public static final ModConfigSpec.DoubleValue SILENT_OWNER_ARMOR_BONUS;
+    public static final ModConfigSpec.DoubleValue SILENT_OWNER_TOUGHNESS_BONUS;
+    public static final ModConfigSpec.DoubleValue SILENT_OTHER_ARMOR_PENALTY;
+    public static final ModConfigSpec.DoubleValue SILENT_OTHER_TOUGHNESS_PENALTY;
 
     public static final ModConfigSpec.DoubleValue MIRROR_FLY_DISTANCE;
     public static final ModConfigSpec.IntValue MIRROR_FLY_TICKS;
@@ -29,6 +39,25 @@ public class ServerConfig {
         REALM_RADIUS = BUILDER.comment("领域水平半径（格）").defineInRange(AvernusConfigLang.Radius.name(), 128, 4, 512);
         CLOSE_COOLDOWN_TICKS = BUILDER.comment("关闭领域后使用者的冷却（tick）").defineInRange(AvernusConfigLang.CloseCooldown.name(), 1200, 0, 72000);
         BUILDER.pop();
+
+        BUILDER.comment("属性修饰均为独立总乘区；0.2 表示 20%，0 表示禁用，修改后影响已开启的领域")
+                .push(AvernusConfigLang.AspectAttributes.name());
+        BUILDER.push(AvernusConfigLang.Umbral.name());
+        UMBRAL_OWNER_SPEED_BONUS = BUILDER.defineInRange(AvernusConfigLang.OwnerSpeedBonus.name(), 0.2, 0.0, 10.0);
+        UMBRAL_OWNER_JUMP_BONUS = BUILDER.comment("起跳强度而非实际跳跃高度的增幅")
+                .defineInRange(AvernusConfigLang.OwnerJumpBonus.name(), 0.2, 0.0, 10.0);
+        UMBRAL_OTHER_SPEED_PENALTY = BUILDER.defineInRange(AvernusConfigLang.OtherSpeedPenalty.name(), 0.2, 0.0, 1.0);
+        BUILDER.pop();
+        BUILDER.push(AvernusConfigLang.Infernal.name());
+        INFERNAL_OWNER_ATTACK_BONUS = BUILDER.defineInRange(AvernusConfigLang.OwnerAttackBonus.name(), 0.2, 0.0, 10.0);
+        INFERNAL_OTHER_ATTACK_PENALTY = BUILDER.defineInRange(AvernusConfigLang.OtherAttackPenalty.name(), 0.2, 0.0, 1.0);
+        BUILDER.pop();
+        BUILDER.push(AvernusConfigLang.Silent.name());
+        SILENT_OWNER_ARMOR_BONUS = BUILDER.defineInRange(AvernusConfigLang.OwnerArmorBonus.name(), 0.25, 0.0, 10.0);
+        SILENT_OWNER_TOUGHNESS_BONUS = BUILDER.defineInRange(AvernusConfigLang.OwnerToughnessBonus.name(), 0.25, 0.0, 10.0);
+        SILENT_OTHER_ARMOR_PENALTY = BUILDER.defineInRange(AvernusConfigLang.OtherArmorPenalty.name(), 0.25, 0.0, 1.0);
+        SILENT_OTHER_TOUGHNESS_PENALTY = BUILDER.defineInRange(AvernusConfigLang.OtherToughnessPenalty.name(), 0.25, 0.0, 1.0);
+        BUILDER.pop(2);
 
         BUILDER.push(AvernusConfigLang.Animation.name());
         MIRROR_FLY_DISTANCE = BUILDER.comment("普通镜飞出距离（格）").defineInRange(AvernusConfigLang.FlyDistance.name(), 4.0, 1.0, 16.0);

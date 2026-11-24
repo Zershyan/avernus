@@ -6,7 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/** 内置境相条目；主效果待定，当前仅提供注册与视觉占位。 */
+/** 内置境相条目；基础属性由境相效果服务读取配置并经事件修正。 */
 public class AvernusRealmAspects {
     public static final DeferredRegister<RealmAspect> REGISTER =
             DeferredRegister.create(AvernusRegistries.REALM_ASPECT, Avernus.MODID);

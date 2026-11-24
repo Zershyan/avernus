@@ -4,7 +4,7 @@ import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 
 import java.util.function.Supplier;
 
-/** 与指定类型互斥的类型。 */
+/** 与指定境印互斥的境印。 */
 public class ExclusiveRealmTrait extends RealmTrait {
     private final Supplier<? extends RealmTrait> rival;
 

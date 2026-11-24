@@ -6,9 +6,10 @@ import io.zershyan.avernus.registry.AvernusConfigs;
 import io.zershyan.avernus.registry.AvernusDataComponents;
 import io.zershyan.avernus.registry.AvernusEntities;
 import io.zershyan.avernus.registry.AvernusEvents;
+import io.zershyan.avernus.registry.AvernusItemExtensions;
 import io.zershyan.avernus.registry.AvernusItems;
-import io.zershyan.avernus.registry.AvernusKeyMappings;
 import io.zershyan.avernus.registry.AvernusPackets;
+import io.zershyan.avernus.registry.AvernusParticleProviders;
 import io.zershyan.avernus.registry.AvernusParticles;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
@@ -31,24 +32,27 @@ public class Avernus {
     public static final Logger LOGGER = LoggerFactory.getLogger(Avernus.class);
 
     public Avernus(IEventBus modEventBus, Dist dist, ModContainer modContainer) {
-        AvernusRegistries.doRegister(modEventBus);
-        AvernusRealmAspects.doRegister(modEventBus);
-        AvernusRealmTraits.doRegister(modEventBus);
-        AvernusDataComponents.doRegister(modEventBus);
-        AvernusAttachments.doRegister(modEventBus);
+        IEventBus neoEventBus = NeoForge.EVENT_BUS;
+
         AvernusItems.doRegister(modEventBus);
-        AvernusParticles.doRegister(modEventBus);
         AvernusSounds.doRegister(modEventBus);
-        AvernusEntities.doRegister(modEventBus, dist);
-        AvernusRecipes.doRegister(modEventBus);
         AvernusPackets.doRegister(modEventBus);
+        AvernusRecipes.doRegister(modEventBus);
+        AvernusParticles.doRegister(modEventBus);
+        AvernusRegistries.doRegister(modEventBus);
+        AvernusAttachments.doRegister(modEventBus);
+        AvernusRealmTraits.doRegister(modEventBus);
+        AvernusEvents.doRegister(modEventBus, dist);
+        AvernusRealmAspects.doRegister(modEventBus);
         AvernusConfigs.doRegister(modContainer, dist);
-        AvernusEvents.doRegister(NeoForge.EVENT_BUS, modEventBus, dist);
-        AvernusCompatFactory.doRegister(modEventBus);
+        AvernusDataComponents.doRegister(modEventBus);
+        AvernusEntities.doRegister(modEventBus, dist);
+        AvernusCompatFactory.register(neoEventBus, modEventBus);
 
         if (dist.isClient()) {
             AvernusShaders.doRegister(modEventBus);
-            AvernusKeyMappings.doRegister(modEventBus);
+            AvernusItemExtensions.doRegister(modEventBus);
+            AvernusParticleProviders.doRegister(modEventBus);
         }
     }
 

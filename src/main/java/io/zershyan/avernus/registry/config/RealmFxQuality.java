@@ -11,7 +11,7 @@ public enum RealmFxQuality implements TranslatableEnum {
     LOW(AvernusConfigLang.QualityLow, 0, 0, 0.35F, 0),
     MEDIUM(AvernusConfigLang.QualityMedium, 4, 2, 0.6F, 0),
     HIGH(AvernusConfigLang.QualityHigh, 6, 4, 1.0F, 3),
-    ULTRA(AvernusConfigLang.QualityUltra, 16, 5, 1.6F, 5);
+    ULTRA(AvernusConfigLang.QualityUltra, 24, 5, 1.6F, 5);
 
     private final ConfigLangEntry label;
     public final int fogSteps;

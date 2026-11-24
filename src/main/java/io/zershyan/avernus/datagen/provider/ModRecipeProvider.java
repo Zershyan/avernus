@@ -64,7 +64,7 @@ public class ModRecipeProvider extends RecipeProvider {
         output.accept(id.withPrefix("mirror/aspect/"), new MirrorAspectRecipe(Ingredient.of(material), new ItemStack(mirror)), null);
     }
 
-    /** 原版材料一比一合成印记，印记在锻造台增删类型。 */
+    /** 原版材料一比一合成印记，印记在锻造台增删境印。 */
     private static void trait(RecipeOutput output, DeferredHolder<RealmTrait, RealmTrait> trait, ItemLike material) {
         TraitSigilItem sigil = AvernusItems.SIGILS.get(trait).get();
         ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, sigil)

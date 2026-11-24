@@ -10,7 +10,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-/** 类型效果事件：湮没、虚妄、幻化；往生经由 MixinLivingEntity 先于图腾触发。 */
+/** 境印效果事件：湮没、虚妄、幻化；往生经由 MixinLivingEntity 先于图腾触发。 */
 public final class RealmTraitHandler {
     private RealmTraitHandler() {
     }

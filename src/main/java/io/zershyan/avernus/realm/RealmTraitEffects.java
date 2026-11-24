@@ -34,12 +34,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-/** 类型效果的服务端判定，事件层只负责转发。 */
+/** 境印效果的服务端判定，事件层只负责转发。 */
 public final class RealmTraitEffects {
     private RealmTraitEffects() {
     }
 
-    /** 实体所在列生效、且带有该类型的领域。 */
+    /** 实体所在列生效、且带有该境印的领域。 */
     private static @Nullable Realm effectWith(Entity entity, RealmTrait trait) {
         if (!(entity.level() instanceof ServerLevel level)) return null;
         RealmSet set = RealmSets.of(level);
@@ -48,7 +48,7 @@ public final class RealmTraitEffects {
         return realm != null && realm.hasTrait(trait) ? realm : null;
     }
 
-    /** 带特定类型的领域每 tick 的服务端效果。 */
+    /** 带特定境印的领域每 tick 的服务端效果。 */
     public static void tick(ServerLevel level, Realm realm) {
         if (realm.hasTrait(AvernusRealmTraits.EQUALITY.get()) && level.getGameTime() % EQUALITY_INTERVAL == 0) liftBelowSurface(level, realm);
         if (realm.hasTrait(AvernusRealmTraits.FREEDOM.get())) updateFreedom(level, realm, !realm.isClosing(level.getGameTime()));

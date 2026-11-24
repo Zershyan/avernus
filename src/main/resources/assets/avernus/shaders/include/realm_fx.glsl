@@ -3,6 +3,8 @@
 const float REALM_SHOCK_SECONDS = 1.5;
 
 // 絮雾层：圆柱壳由外向内取两层，每层间隔 REALM_WISP_STEP 格，掠射时路径变长更亮，远处淡出以融入边界雾。
+// 弧长坐标在正西（atan 的 ±π 处）首尾相接，接缝前 REALM_WISP_SEAM 格内与绕行一周后的取值交叉过渡，免得显出一条竖线。
+const float REALM_WISP_SEAM = 24.0;
 const float REALM_WISP_STEP = 2.5;
 
 vec3 realm_wisp_tint(vec3 glow, float height) {
@@ -41,7 +43,11 @@ vec3 realm_wisp_shell(sampler2D noise, vec3 dir, float dist, vec2 center, float 
             float graze = min(1.0 / max(abs(dot(normalize(radial), normalize(dir.xz))), 0.25), 4.0);
             float body = exp(-max(h, 0.0) / falloff) * smoothstep(-1.0, 1.0, h) * smoothstep(top, top * 0.6, h);
             float fade = mix(1.0, 0.35, smoothstep(40.0, 200.0, t));
-            sum += realm_wisp_tint(glow, h) * realm_wisp(noise, atan(radial.y, radial.x) * r, h, atmosphere, time, flow) * body * graze * fade;
+            float along = atan(radial.y, radial.x) * r;
+            float wisp = realm_wisp(noise, along, h, atmosphere, time, flow);
+            float seam = smoothstep(3.14159265 * r - REALM_WISP_SEAM, 3.14159265 * r, along);
+            if (seam > 0.0) wisp = mix(wisp, realm_wisp(noise, along - 6.28318531 * r, h, atmosphere, time, flow), seam);
+            sum += realm_wisp_tint(glow, h) * wisp * body * graze * fade;
         }
     }
     return sum * 0.5;

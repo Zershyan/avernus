@@ -16,7 +16,7 @@ import net.minecraft.world.level.Level;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-/** 阿维尔诺之镜：境相由物品本身决定，附加类型保存在 {@link MirrorTraits} 组件中。 */
+/** 阿维尔诺之镜：境相由物品本身决定，附加境印保存在 {@link MirrorTraits} 组件中。 */
 public class MirrorItem extends Item {
     private final Supplier<? extends RealmAspect> aspect;
 
