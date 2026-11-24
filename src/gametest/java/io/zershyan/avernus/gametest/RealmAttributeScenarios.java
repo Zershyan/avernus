@@ -14,7 +14,6 @@ import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
 import io.zershyan.avernus.registry.config.ServerConfig;
-import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -31,21 +30,20 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.gametest.GameTestHolder;
-import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /** 境相属性与两级事件的服务端回归；各场景独占批次，监听器和配置均在同一 tick 内还原。 */
 @GameTestHolder(Avernus.MODID)
-@PrefixGameTestTemplate(false)
 public final class RealmAttributeScenarios {
-    private static final ResourceLocation MODIFIER = Avernus.id("realm_aspect");
+    private static final UUID MODIFIER = UUID.nameUUIDFromBytes("avernus:realm_aspect".getBytes(StandardCharsets.UTF_8));
 
     @GameTest(template = "empty", batch = "aspect_umbral", timeoutTicks = 260)
     public static void umbralUsesIndependentTransientMultipliers(GameTestHelper helper) {
@@ -73,9 +71,9 @@ public final class RealmAttributeScenarios {
     public static void infernalMultipliesAfterForeignModifiers(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.INFERNAL.getId(), scene -> {
             AttributeInstance attack = attribute(scene.owner(), Attributes.ATTACK_DAMAGE);
-            var add = new AttributeModifier(Avernus.id("test_add"), 2.0, AttributeModifier.Operation.ADDITION);
-            var base = new AttributeModifier(Avernus.id("test_base"), 0.5, AttributeModifier.Operation.MULTIPLY_BASE);
-            var total = new AttributeModifier(Avernus.id("test_total"), 0.5, AttributeModifier.Operation.MULTIPLY_TOTAL);
+            var add = new AttributeModifier(UUID.nameUUIDFromBytes("test_add".getBytes(StandardCharsets.UTF_8)), "test_add", 2.0, AttributeModifier.Operation.ADDITION);
+            var base = new AttributeModifier(UUID.nameUUIDFromBytes("test_base".getBytes(StandardCharsets.UTF_8)), "test_base", 0.5, AttributeModifier.Operation.MULTIPLY_BASE);
+            var total = new AttributeModifier(UUID.nameUUIDFromBytes("test_total".getBytes(StandardCharsets.UTF_8)), "test_total", 0.5, AttributeModifier.Operation.MULTIPLY_TOTAL);
             attack.addTransientModifier(add);
             attack.addTransientModifier(base);
             attack.addTransientModifier(total);
@@ -86,7 +84,7 @@ public final class RealmAttributeScenarios {
             assertValue(helper, scene.target(), Attributes.ATTACK_DAMAGE, 8.0);
             scene.close();
             assertValue(helper, scene.owner(), Attributes.ATTACK_DAMAGE, 27.0);
-            helper.assertTrue(attack.hasModifier(add.id()) && attack.hasModifier(base.id()) && attack.hasModifier(total.id()), "不得删除其他来源修饰");
+            helper.assertTrue(attack.hasModifier(add.getId()) && attack.hasModifier(base.getId()) && attack.hasModifier(total.getId()), "不得删除其他来源修饰");
         });
     }
 
@@ -94,7 +92,7 @@ public final class RealmAttributeScenarios {
     public static void silentScalesArmorAndToughness(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.SILENT.getId(), scene -> {
             scene.update();
-            for (Holder<Attribute> key : List.of(Attributes.ARMOR, Attributes.ARMOR_TOUGHNESS)) {
+            for (Attribute key : List.of(Attributes.ARMOR, Attributes.ARMOR_TOUGHNESS)) {
                 assertAmount(helper, scene.owner(), key, 0.25);
                 assertAmount(helper, scene.target(), key, -0.25);
             }
@@ -196,7 +194,7 @@ public final class RealmAttributeScenarios {
             team.setAllowFriendlyFire(true);
             var pet = helper.spawnWithNoFreeWill(EntityType.WOLF, new Vec3(6.5, 2.0, 8.5));
             pet.setNoGravity(true);
-            pet.setTame(true, false);
+            pet.setTame(true);
             pet.setOwnerUUID(scene.owner().getUUID());
             try {
                 scene.update();
@@ -398,7 +396,7 @@ public final class RealmAttributeScenarios {
 
     @GameTest(template = "empty", batch = "aspect_event_validation")
     public static void modifierTablesValidateAndDefensivelyCopyValues(GameTestHelper helper) {
-        Map<Holder<Attribute>, Double> initial = new HashMap<>();
+        Map<Attribute, Double> initial = new HashMap<>();
         initial.put(Attributes.MOVEMENT_SPEED, 0.2);
         var table = new RealmAttributeEvent.Modifiers(initial);
         initial.clear();
@@ -501,27 +499,27 @@ public final class RealmAttributeScenarios {
         helper.assertTrue(realm.covers(target.getBlockX(), target.getBlockZ(), helper.getLevel().getGameTime()), "波面尚未覆盖目标列");
     }
 
-    private static AttributeInstance attribute(LivingEntity entity, Holder<Attribute> key) {
+    private static AttributeInstance attribute(LivingEntity entity, Attribute key) {
         return Objects.requireNonNull(entity.getAttribute(key));
     }
 
-    private static void assertAmount(GameTestHelper helper, LivingEntity entity, Holder<Attribute> key, double amount) {
+    private static void assertAmount(GameTestHelper helper, LivingEntity entity, Attribute key, double amount) {
         AttributeModifier modifier = attribute(entity, key).getModifier(MODIFIER);
-        helper.assertTrue(modifier != null && Math.abs(modifier.amount() - amount) < 1.0E-9
-                && modifier.operation() == AttributeModifier.Operation.MULTIPLY_TOTAL, "属性须采用预期的独立总乘区：" + key);
+        helper.assertTrue(modifier != null && Math.abs(modifier.getAmount() - amount) < 1.0E-9
+                && modifier.getOperation() == AttributeModifier.Operation.MULTIPLY_TOTAL, "属性须采用预期的独立总乘区：" + key);
     }
 
-    private static void assertValue(GameTestHelper helper, LivingEntity entity, Holder<Attribute> key, double expected) {
+    private static void assertValue(GameTestHelper helper, LivingEntity entity, Attribute key, double expected) {
         helper.assertTrue(Math.abs(entity.getAttributeValue(key) - expected) < 1.0E-6,
                 "属性值不符合预期：" + key + "，实际=" + entity.getAttributeValue(key) + "，预期=" + expected);
     }
 
     private static void assertClear(GameTestHelper helper, LivingEntity entity) {
-        for (Holder<Attribute> key : List.of(Attributes.MOVEMENT_SPEED, Attributes.JUMP_STRENGTH, Attributes.ATTACK_DAMAGE,
+        for (Attribute key : List.of(Attributes.MOVEMENT_SPEED, Attributes.JUMP_STRENGTH, Attributes.ATTACK_DAMAGE,
                 Attributes.ARMOR, Attributes.ARMOR_TOUGHNESS, Attributes.MAX_HEALTH)) {
             AttributeInstance value = entity.getAttribute(key);
             helper.assertTrue(value == null || !value.hasModifier(MODIFIER), "不应残留境相修饰：" + key);
         }
-        helper.assertTrue(entity.getExistingDataOrNull(AvernusAttachments.REALM_ATTRIBUTES) == null, "不应残留属性来源附件");
+        helper.assertTrue(AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES) == null, "不应残留属性来源附件");
     }
 }

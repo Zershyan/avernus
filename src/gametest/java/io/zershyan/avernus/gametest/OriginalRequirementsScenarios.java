@@ -33,13 +33,11 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForgeMod;
 import net.minecraftforge.gametest.GameTestHolder;
-import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.List;
 import java.util.Objects;
 
 @GameTestHolder(Avernus.MODID)
-@PrefixGameTestTemplate(false)
 public final class OriginalRequirementsScenarios {
     private static final BlockPos TARGET = new BlockPos(8, 2, 8);
 

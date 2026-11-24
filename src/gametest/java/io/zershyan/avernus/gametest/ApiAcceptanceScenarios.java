@@ -24,7 +24,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
-import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Modifier;
@@ -39,7 +38,6 @@ import java.util.Objects;
 import java.util.Set;
 
 @GameTestHolder(AvernusApi.MODID)
-@PrefixGameTestTemplate(false)
 public final class ApiAcceptanceScenarios {
     private static final ResourceLocation UMBRAL = id("umbral");
     private static final ResourceLocation EQUALITY = id("equality");

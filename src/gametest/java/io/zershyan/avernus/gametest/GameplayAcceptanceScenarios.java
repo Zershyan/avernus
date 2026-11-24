@@ -11,7 +11,6 @@ import io.zershyan.avernus.api.realm.MirrorForm;
 import io.zershyan.avernus.api.realm.RealmResult;
 import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
@@ -28,14 +27,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.registries.RegistryObject;
-import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 @GameTestHolder(Avernus.MODID)
-@PrefixGameTestTemplate(false)
 public final class GameplayAcceptanceScenarios {
     @GameTest(template = "empty", batch = "re_audit_path_target", timeoutTicks = 250)
     public static void groundNavigationAcceptsVirtualAirAtGoal(GameTestHelper helper) {
@@ -68,7 +65,7 @@ public final class GameplayAcceptanceScenarios {
         var smith = new SmithingMenu(1, player.getInventory());
         var empty = new ItemStack(AvernusItems.UMBRAL_MIRROR.get());
         var name = Component.literal("复审镜");
-        empty.set(DataComponents.CUSTOM_NAME, name);
+        empty.setHoverName(name);
         helper.assertTrue(smith.getSlot(0).mayPlace(new ItemStack(Items.FEATHER)) && smith.getSlot(1).mayPlace(empty), "应能放入羽毛和镜子");
         player.getInventory().setItem(0, empty);
         player.getInventory().setItem(1, new ItemStack(sigil(AvernusRealmTraits.WEAK_WATER), 2));

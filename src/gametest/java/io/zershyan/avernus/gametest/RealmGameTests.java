@@ -25,7 +25,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
-import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,6 @@ import java.util.List;
  * 各测试独占批次，避免 128 格领域互相干扰。
  */
 @GameTestHolder(Avernus.MODID)
-@PrefixGameTestTemplate(false)
 public final class RealmGameTests {
     private static final String TEMPLATE = "empty";
     private static final int TIMEOUT = 400;
