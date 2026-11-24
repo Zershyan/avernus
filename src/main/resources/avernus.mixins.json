@@ -24,9 +24,7 @@
     "avernus.common.MixinLevelChunk",
     "avernus.common.MixinLivingEntity",
     "avernus.common.MixinMoveControl",
-    "avernus.common.MixinPathNavigation",
     "avernus.common.MixinPathNavigationRegion",
-    "avernus.common.MixinPathfindingContext",
     "avernus.common.MixinPiglinAi",
     "avernus.common.MixinPlayer",
     "avernus.common.MixinPiglinBruteAi",
@@ -35,7 +33,7 @@
     "avernus.common.MixinServerPlayer",
     "avernus.common.MixinSwellGoal",
     "avernus.common.MixinTntBlock",
-    "avernus.common.MixinWalkNodeEvaluator"
+    "avernus.common.MixinPathNavigation"
   ],
   "client": [
     "avernus.client.MixinBlockEntityRenderDispatcher",

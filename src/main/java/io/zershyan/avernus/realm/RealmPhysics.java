@@ -9,9 +9,9 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.PathNavigationRegion;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.PathNavigationRegion;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.NodeEvaluator;
-import net.minecraft.world.level.pathfinder.PathType;
-import net.minecraft.world.level.pathfinder.PathfindingContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.FluidState;
@@ -70,11 +70,12 @@ public final class RealmPhysics {
     }
 
     /** 领域内的路径类型改在绑定发起者的寻路视图上查询；领域外返回 null 沿用原实现。 */
-    public static @Nullable PathType pathType(NodeEvaluator evaluator, Mob mob, BlockPos pos) {
+    public static @Nullable BlockPathTypes pathType(NodeEvaluator evaluator, Mob mob, BlockPos pos) {
         Level level = mob.level();
         if (realmAt(level, mob, pos) == null) return null;
-        var region = new PathNavigationRegion(level, pos.offset(-2, -2, -2), pos.offset(2, 2, 2));
-        return evaluator.getPathType(new PathfindingContext(region, mob), pos.getX(), pos.getY(), pos.getZ());
+        PathNavigationRegion region = new PathNavigationRegion(level, pos.offset(-2, -2, -2), pos.offset(2, 2, 2));
+        ((IMixinPathNavigationRegion) region).avernus$setSubject(mob);
+        return evaluator.getBlockPathType(region, pos.getX(), pos.getY(), pos.getZ(), mob);
     }
 
     /** 实体内部效果（窒息、蛛网、方块速度、脚下方块、屏幕遮罩）使用的状态。 */

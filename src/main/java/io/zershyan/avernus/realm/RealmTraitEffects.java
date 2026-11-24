@@ -26,8 +26,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.common.EffectCures;
-import net.minecraftforge.common.MinecraftForgeMod;
+import net.minecraftforge.common.ForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -125,7 +124,7 @@ public final class RealmTraitEffects {
         if (realm == null || !realm.ownerId().equals(entity.getUUID())) return false;
         RealmManager.emergencyClose(level, realm);
         entity.setHealth(1.0F);
-        entity.removeEffectsCuredBy(EffectCures.PROTECTED_BY_TOTEM);
+        entity.removeAllEffects();
         entity.addEffect(new MobEffectInstance(MobEffects.REGENERATION, ServerConfig.REBIRTH_REGENERATION_TICKS.get(),
                 ServerConfig.REBIRTH_REGENERATION_LEVEL.get() - 1));
         entity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, ServerConfig.REBIRTH_ABSORPTION_TICKS.get(),

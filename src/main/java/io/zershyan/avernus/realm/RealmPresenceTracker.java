@@ -9,7 +9,7 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -132,7 +132,7 @@ public final class RealmPresenceTracker {
         AABB box = entity.getBoundingBox().deflate(EPSILON);
         if (entity.isPassenger() || level.noBlockCollision(entity, box)) return;
         double start = entity.getY();
-        boolean aquatic = SpawnPlacements.getPlacementType(entity.getType()) == SpawnPlacementTypes.IN_WATER;
+        boolean aquatic = SpawnPlacements.getPlacementType(entity.getType()) == SpawnPlacementType.IN_WATER;
         for (int y = Mth.ceil(start); y <= level.getMaxBuildHeight(); y++) {
             AABB candidate = box.move(0.0, y - start, 0.0);
             if (!level.noBlockCollision(entity, candidate)) continue;

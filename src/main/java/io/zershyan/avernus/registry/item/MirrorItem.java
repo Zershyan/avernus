@@ -1,9 +1,12 @@
 package io.zershyan.avernus.registry.item;
 
 import io.zershyan.avernus.api.realm.MirrorForm;
+import io.zershyan.avernus.client.mirror.MirrorItemRenderer;
 import io.zershyan.avernus.realm.RealmManager;
 import io.zershyan.avernus.registry.data_component.MirrorTraits;
 import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -13,6 +16,7 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.Level;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** 阿维尔诺之镜：境相由物品本身决定，附加境印保存在 {@link MirrorTraits} 组件中。 */
@@ -37,6 +41,16 @@ public class MirrorItem extends Item {
 
     public MirrorForm form(ItemStack stack) {
         return new MirrorForm(Objects.requireNonNull(aspect().getId()), getTraits(stack).ids());
+    }
+
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(new IClientItemExtensions() {
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                return MirrorItemRenderer.instance();
+            }
+        });
     }
 
     @Override

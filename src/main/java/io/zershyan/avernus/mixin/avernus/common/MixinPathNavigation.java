@@ -1,35 +1,29 @@
 package io.zershyan.avernus.mixin.avernus.common;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import io.zershyan.avernus.realm.RealmPhysics;
+import io.zershyan.avernus.util.mixin.avernus.common.IMixinPathNavigationRegion;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.PathNavigationRegion;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
-/** 下一个路点的落脚高度按有效地形计算，否则目标被抬高会触发起跳。 */
+/** 每次寻路创建的区域视图绑定发起者，供有效地形按主体解析隔绝与重叠。 */
 @Mixin(PathNavigation.class)
 public abstract class MixinPathNavigation {
     @Shadow
     @Final
     protected Mob mob;
 
-    @WrapOperation(method = "getGroundY", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
-    private BlockState avernus$groundBelow(Level level, BlockPos pos, Operation<BlockState> original) {
-        return RealmPhysics.collision(level, mob, pos, original.call(level, pos));
-    }
-
-    @WrapOperation(method = "getGroundY", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/pathfinder/WalkNodeEvaluator;getFloorLevel(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)D"))
-    private double avernus$floor(BlockGetter level, BlockPos pos, Operation<Double> original) {
-        return RealmPhysics.floorLevel(mob, pos, () -> original.call(level, pos));
+    @Redirect(method = "createPath(Lnet/minecraft/core/BlockPos;I)Lnet/minecraft/world/level/pathfinder/Path;",
+            at = @At(value = "NEW", target = "(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/PathNavigationRegion;"))
+    private PathNavigationRegion avernus$bindSubject(Level level, BlockPos from, BlockPos to) {
+        PathNavigationRegion region = new PathNavigationRegion(level, from, to);
+        ((IMixinPathNavigationRegion) region).avernus$setSubject(mob);
+        return region;
     }
 }

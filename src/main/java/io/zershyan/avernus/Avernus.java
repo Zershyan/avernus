@@ -5,7 +5,6 @@ import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.AvernusConfigs;
 import io.zershyan.avernus.registry.AvernusEntities;
 import io.zershyan.avernus.registry.AvernusEvents;
-import io.zershyan.avernus.registry.AvernusItemExtensions;
 import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.AvernusPackets;
 import io.zershyan.avernus.registry.AvernusParticleProviders;
@@ -51,7 +50,6 @@ public class Avernus {
 
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             AvernusShaders.doRegister(modBus);
-            AvernusItemExtensions.doRegister(modBus);
             AvernusParticleProviders.doRegister(modBus);
         });
     }

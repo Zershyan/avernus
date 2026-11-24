@@ -3,7 +3,7 @@ package io.zershyan.avernus.mixin.avernus.common;
 import io.zershyan.avernus.realm.RealmProtection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -32,8 +32,12 @@ public abstract class MixinTntBlock {
         if (RealmProtection.isProtected(level, pos)) ci.cancel();
     }
 
-    @Inject(method = "useItemOn", at = @At("HEAD"), cancellable = true)
-    private void avernus$keepIgniter(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit, CallbackInfoReturnable<ItemInteractionResult> ci) {
-        if ((stack.is(Items.FIRE_CHARGE) || stack.is(Items.FLINT_AND_STEEL)) && RealmProtection.isProtected(level, pos)) ci.setReturnValue(ItemInteractionResult.FAIL);
+    @Inject(method = "use", at = @At("HEAD"), cancellable = true)
+    private void avernus$keepIgniter(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit,
+                                     CallbackInfoReturnable<InteractionResult> ci) {
+        ItemStack stack = player.getItemInHand(hand);
+        if ((stack.is(Items.FIRE_CHARGE) || stack.is(Items.FLINT_AND_STEEL)) && RealmProtection.isProtected(level, pos)) {
+            ci.setReturnValue(InteractionResult.FAIL);
+        }
     }
 }
