@@ -82,10 +82,6 @@ public class MirrorEntity extends Entity {
     }
 
     @Override
-    public void push(@NotNull Vec3 vector) {
-    }
-
-    @Override
     protected void readAdditionalSaveData(@NotNull CompoundTag tag) {
     }
 

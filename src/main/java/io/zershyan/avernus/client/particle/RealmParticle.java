@@ -7,7 +7,7 @@ import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.core.particles.ColorParticleOption;
+import io.zershyan.avernus.registry.particle.RealmParticleOptions;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,7 +41,7 @@ public class RealmParticle extends TextureSheetParticle {
     private final float baseSize, baseAlpha, phase, spin;
 
     private RealmParticle(ClientLevel level, double x, double y, double z, double dx, double dy, double dz, Kind kind,
-                          ColorParticleOption color, SpriteSet sprites) {
+                          RealmParticleOptions color, SpriteSet sprites) {
         super(level, x, y, z);
         this.kind = kind;
         xd = dx;
@@ -52,8 +52,9 @@ public class RealmParticle extends TextureSheetParticle {
         hasPhysics = false;
         lifetime = Mth.nextInt(random, kind.minLife, kind.maxLife);
         baseSize = quadSize = kind.size * (0.7F + random.nextFloat() * 0.6F);
-        baseAlpha = color.getAlpha();
-        setColor(color.getRed(), color.getGreen(), color.getBlue());
+        baseAlpha = color.alpha();
+        int rgb = color.rgb();
+        setColor(((rgb >> 16) & 0xFF) / 255.0F, ((rgb >> 8) & 0xFF) / 255.0F, (rgb & 0xFF) / 255.0F);
         phase = random.nextFloat() * Mth.TWO_PI;
         spin = kind == Kind.FROST ? (random.nextFloat() - 0.5F) * 0.2F : 0.0F;
         roll = oRoll = random.nextFloat() * Mth.TWO_PI;
@@ -105,9 +106,9 @@ public class RealmParticle extends TextureSheetParticle {
         return LightTexture.FULL_BRIGHT;
     }
 
-    public record Provider(Kind kind, SpriteSet sprites) implements ParticleProvider<ColorParticleOption> {
+    public record Provider(Kind kind, SpriteSet sprites) implements ParticleProvider<RealmParticleOptions> {
         @Override
-        public Particle createParticle(@NotNull ColorParticleOption color, @NotNull ClientLevel level, double x, double y, double z,
+        public Particle createParticle(@NotNull RealmParticleOptions color, @NotNull ClientLevel level, double x, double y, double z,
                                        double dx, double dy, double dz) {
             return new RealmParticle(level, x, y, z, dx, dy, dz, kind, color, sprites);
         }

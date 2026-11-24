@@ -1,7 +1,7 @@
 package io.zershyan.avernus.registry;
 
 import io.zershyan.avernus.client.particle.RealmParticle;
-import net.minecraft.core.particles.ColorParticleOption;
+import io.zershyan.avernus.registry.particle.RealmParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
@@ -23,7 +23,7 @@ public final class AvernusParticleProviders {
         provider(event, AvernusParticles.FLOCK.get(), RealmParticle.Kind.FLOCK);
     }
 
-    private static void provider(RegisterParticleProvidersEvent event, ParticleType<ColorParticleOption> type, RealmParticle.Kind kind) {
+    private static void provider(RegisterParticleProvidersEvent event, ParticleType<RealmParticleOptions> type, RealmParticle.Kind kind) {
         event.registerSpriteSet(type, sprites -> new RealmParticle.Provider(kind, sprites));
     }
 }

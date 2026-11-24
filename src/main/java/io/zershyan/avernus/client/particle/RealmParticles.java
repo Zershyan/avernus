@@ -10,7 +10,7 @@ import io.zershyan.avernus.registry.config.RealmFxQuality;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.particles.ColorParticleOption;
+import io.zershyan.avernus.registry.particle.RealmParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.util.FastColor;
 import net.minecraft.util.Mth;
@@ -131,7 +131,7 @@ public final class RealmParticles {
                 (random.nextDouble() - 0.5) * 0.01, (random.nextDouble() - 0.3) * 0.005, (random.nextDouble() - 0.5) * 0.01);
     }
 
-    private static ParticleType<ColorParticleOption> type(RealmVisualProfile visual) {
+    private static ParticleType<RealmParticleOptions> type(RealmVisualProfile visual) {
         return switch (visual.atmosphere()) {
             case WISP -> AvernusParticles.WISP.get();
             case EMBER -> AvernusParticles.EMBER.get();
@@ -139,9 +139,9 @@ public final class RealmParticles {
         };
     }
 
-    private static void add(ClientLevel level, ParticleType<ColorParticleOption> type, int rgb, float alpha,
+    private static void add(ClientLevel level, ParticleType<RealmParticleOptions> type, int rgb, float alpha,
                             double x, double y, double z, double dx, double dy, double dz) {
-        level.addParticle(ColorParticleOption.create(type, FastColor.ARGB32.color(Math.round(alpha * 255), rgb)), x, y, z, dx, dy, dz);
+        level.addParticle(new RealmParticleOptions(type, rgb, alpha), x, y, z, dx, dy, dz);
     }
 
     /** 期望值为 expected 的整数：整数部分必出，小数部分按概率补一个。 */

@@ -13,13 +13,15 @@ public final class CuriosAccess {
     }
 
     public static ItemStack findWornMirror(LivingEntity entity) {
-        return CuriosApi.getCuriosInventory(entity).flatMap(inventory -> inventory.getStacksHandler(BODY).map(body -> {
+        return CuriosApi.getCuriosInventory(entity).map(inventory -> {
+            var body = inventory.getStacksHandler(BODY).orElse(null);
+            if (body == null || !body.isVisible()) return ItemStack.EMPTY;
             var stacks = body.getStacks();
             for (int i = 0; i < stacks.getSlots(); i++) {
                 ItemStack stack = stacks.getStackInSlot(i);
-                if (inventory.isSlotActive(BODY, i) && AvernusApi.isMirror(stack)) return stack;
+                if (AvernusApi.isMirror(stack)) return stack;
             }
             return ItemStack.EMPTY;
-        })).orElse(ItemStack.EMPTY);
+        }).orElse(ItemStack.EMPTY);
     }
 }

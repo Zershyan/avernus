@@ -6,7 +6,6 @@ import io.zershyan.avernus.registry.packet.RealmRemovePacket;
 import io.zershyan.avernus.registry.packet.RealmSnapshotPacket;
 import io.zershyan.avernus.registry.packet.RealmUpdatePacket;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ChunkTrackingView;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -92,18 +91,8 @@ public final class RealmSync {
 
     private static boolean observes(ServerPlayer player, Realm realm) {
         if (realm.ownerId().equals(player.getUUID())) return true;
-        int distance;
-        double x, z;
-        if (player.getChunkTrackingView() instanceof ChunkTrackingView.Positioned view) {
-            distance = view.viewDistance();
-            x = view.center().getMiddleBlockX();
-            z = view.center().getMiddleBlockZ();
-        } else {
-            distance = player.server.getPlayerList().getViewDistance();
-            x = player.getX();
-            z = player.getZ();
-        }
-        return intersectsView(realm.exactCenterX(), realm.exactCenterZ(), realm.radius(), x, z, distance);
+        int distance = player.getServer() == null ? 10 : player.getServer().getPlayerList().getViewDistance();
+        return intersectsView(realm.exactCenterX(), realm.exactCenterZ(), realm.radius(), player.getX(), player.getZ(), distance);
     }
 
     static boolean intersectsView(double realmX, double realmZ, int radius, double viewX, double viewZ, int chunks) {
