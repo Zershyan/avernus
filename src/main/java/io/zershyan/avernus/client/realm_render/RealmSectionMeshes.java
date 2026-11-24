@@ -1,25 +1,20 @@
 package io.zershyan.avernus.client.realm_render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.vertex.VertexSorting;
-import net.minecraft.Util;
 import net.minecraft.CrashReport;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.chunk.RenderChunkRegion;
 import net.minecraft.client.renderer.chunk.RenderRegionCache;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.AddSectionGeometryEvent.SectionRenderingContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -39,8 +34,6 @@ final class RealmSectionMeshes {
     private int inFlight;
     private long bytes;
     private long frame;
-    private int sortBudget;
-    private @Nullable ByteBufferBuilder sortBuffer;
 
     private static final class Slot {
         @Nullable Mesh mesh;
@@ -59,33 +52,20 @@ final class RealmSectionMeshes {
 
     private static final class Layer {
         final VertexBuffer vertices;
-        final @Nullable MeshData.SortState sort;
-        Vec3 sortedAt;
 
-        Layer(VertexBuffer vertices, @Nullable MeshData.SortState sort, Vec3 sortedAt) {
+        Layer(VertexBuffer vertices) {
             this.vertices = vertices;
-            this.sort = sort;
-            this.sortedAt = sortedAt;
         }
     }
 
-    private record CpuLayer(ByteBufferBuilder bytes, @Nullable MeshData data) {
+    private record CpuLayer(BufferBuilder.RenderedBuffer data) {
         void close() {
-            if (data != null) data.close();
-            bytes.close();
-        }
-    }
-
-    private record Builder(ByteBufferBuilder bytes, BufferBuilder vertices) {
-        static Builder create() {
-            ByteBufferBuilder bytes = new ByteBufferBuilder(4096);
-            return new Builder(bytes, new BufferBuilder(bytes, VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK));
+            data.release();
         }
     }
 
     void beginFrame() {
         frame++;
-        sortBudget = 12;
     }
 
     private boolean fits(long size) {
@@ -95,6 +75,7 @@ final class RealmSectionMeshes {
     boolean canPrewarm() {
         return inFlight < MAX_IN_FLIGHT - 2 && sections.size() < MAX_SECTIONS && bytes < MAX_BYTES;
     }
+
     void request(ClientLevel level, RenderRegionCache regions, long pos, @Nullable RealmMeshKey style, Vec3 camera) {
         SectionMeshes existing = sections.get(pos);
         if (existing != null) {
@@ -108,13 +89,13 @@ final class RealmSectionMeshes {
         Slot slot = new Slot();
         entry.slots.put(style, slot);
         SectionPos section = SectionPos.of(pos);
-        RenderChunkRegion region = regions.createRegion(level, section, style == null);
+        BlockPos origin = section.origin();
+        RenderChunkRegion region = regions.createRegion(level, origin, origin.offset(15, 15, 15), 1);
         if (region == null) {
             slot.mesh = EMPTY;
             return;
         }
         RealmSectionMesher.Material material = style == null ? null : material(style);
-        BlockPos origin = section.origin();
         Minecraft minecraft = Minecraft.getInstance();
         inFlight++;
         CompletableFuture.supplyAsync(() -> build(region, origin, style, material), Util.backgroundExecutor())
@@ -130,18 +111,18 @@ final class RealmSectionMeshes {
 
     private static Map<RenderType, CpuLayer> build(RenderChunkRegion region, BlockPos origin, @Nullable RealmMeshKey style,
                                                    @Nullable RealmSectionMesher.Material material) {
-        Map<RenderType, Builder> builders = new HashMap<>();
+        RealmGeometryContext context = new RealmGeometryContext(region);
         Map<RenderType, CpuLayer> layers = new HashMap<>();
         try {
-            SectionRenderingContext context = new SectionRenderingContext(
-                    type -> builders.computeIfAbsent(type, ignored -> Builder.create()).vertices, region, new PoseStack());
             if (style == null) RealmSectionMesher.buildBoundary(context, origin);
             else if (material != null) RealmSectionMesher.buildSurface(context, origin, style, material);
-            builders.forEach((type, builder) -> layers.put(type, new CpuLayer(builder.bytes, builder.vertices.build())));
+            context.buffers().forEach((type, builder) -> {
+                BufferBuilder.RenderedBuffer data = builder.endOrDiscardIfEmpty();
+                if (data != null) layers.put(type, new CpuLayer(data));
+            });
             return layers;
         } catch (RuntimeException | Error failure) {
             layers.values().forEach(CpuLayer::close);
-            builders.forEach((type, builder) -> { if (!layers.containsKey(type)) builder.bytes.close(); });
             throw failure;
         }
     }
@@ -175,53 +156,38 @@ final class RealmSectionMeshes {
                 return;
             }
         }
-        slot.mesh = upload(layers, origin, camera);
+        slot.mesh = upload(layers);
         bytes += slot.mesh.size;
     }
 
     private static long estimateBytes(Map<RenderType, CpuLayer> layers) {
         long size = 0L;
         for (var entry : layers.entrySet()) {
-            MeshData data = entry.getValue().data;
-            if (data == null) continue;
-            size += (long) data.drawState().vertexCount() * data.drawState().format().getVertexSize();
-            if (entry.getKey() == RenderType.translucent() || entry.getKey() == RenderType.tripwire()) {
-                size += (long) data.drawState().indexCount() * Integer.BYTES;
-            }
+            var state = entry.getValue().data.drawState();
+            size += (long) state.vertexCount() * state.format().getVertexSize();
         }
         return size;
     }
 
-    private Mesh upload(Map<RenderType, CpuLayer> source, BlockPos origin, Vec3 camera) {
+    private Mesh upload(Map<RenderType, CpuLayer> source) {
         Map<RenderType, Layer> layers = new HashMap<>();
         long size = 0;
         try {
-            var iterator = source.entrySet().iterator();
-            while (iterator.hasNext()) {
-                var entry = iterator.next();
+            for (var entry : source.entrySet()) {
                 RenderType type = entry.getKey();
                 CpuLayer cpu = entry.getValue();
-                iterator.remove();
-                MeshData data = cpu.data;
+                var state = cpu.data.drawState();
+                size += (long) state.vertexCount() * state.format().getVertexSize();
+                VertexBuffer vertices = new VertexBuffer();
+                vertices.bind();
                 boolean transferred = false;
-                VertexBuffer vertices = null;
                 try {
-                    if (data == null) continue;
-                    MeshData.SortState sort = type == RenderType.translucent() || type == RenderType.tripwire()
-                            ? data.sortQuads(sortBuffer(), sorting(origin, camera)) : null;
-                    size += (long) data.drawState().vertexCount() * data.drawState().format().getVertexSize();
-                    if (sort != null) size += (long) data.drawState().indexCount() * Integer.BYTES;
-                    vertices = new VertexBuffer(VertexBuffer.Usage.STATIC);
-                    vertices.bind();
+                    vertices.upload(cpu.data);
                     transferred = true;
-                    vertices.upload(data);
-                    layers.put(type, new Layer(vertices, sort, camera));
-                    vertices = null;
                 } finally {
-                    if (!transferred && data != null) data.close();
-                    if (vertices != null) vertices.close();
-                    cpu.bytes.close();
+                    if (!transferred) cpu.data.release();
                 }
+                layers.put(type, new Layer(vertices));
             }
             return new Mesh(layers, size);
         } catch (RuntimeException | Error failure) {
@@ -233,16 +199,6 @@ final class RealmSectionMeshes {
         }
     }
 
-    private ByteBufferBuilder sortBuffer() {
-        if (sortBuffer == null) sortBuffer = new ByteBufferBuilder(4096);
-        return sortBuffer;
-    }
-
-    private static VertexSorting sorting(BlockPos origin, Vec3 camera) {
-        return VertexSorting.byDistance((float) (camera.x - origin.getX()), (float) (camera.y - origin.getY()),
-                (float) (camera.z - origin.getZ()));
-    }
-
     boolean hasLayer(long section, @Nullable RealmMeshKey style, RenderType type) {
         return layer(section, style, type) != null;
     }
@@ -251,12 +207,6 @@ final class RealmSectionMeshes {
         Layer layer = layer(section, style, type);
         if (layer == null) return;
         layer.vertices.bind();
-        if (layer.sort != null && sortBudget > 0 && camera.distanceToSqr(layer.sortedAt) > 1.0) {
-            var indices = layer.sort.buildSortedIndexBuffer(sortBuffer(), sorting(origin, camera));
-            if (indices != null) layer.vertices.uploadIndexBuffer(indices);
-            layer.sortedAt = camera;
-            sortBudget--;
-        }
         layer.vertices.draw();
     }
 
@@ -305,7 +255,5 @@ final class RealmSectionMeshes {
     void reset() {
         sections.values().forEach(this::close);
         sections.clear();
-        if (sortBuffer != null) sortBuffer.close();
-        sortBuffer = null;
     }
 }

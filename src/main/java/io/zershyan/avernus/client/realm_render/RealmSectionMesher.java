@@ -14,13 +14,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.client.event.AddSectionGeometryEvent;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.client.textures.FluidSpriteCache;
 import net.minecraftforge.client.model.lighting.QuadLighter;
 
 /** 只烘焙与波纹无关的网格；实际可见面在绘制时由相邻列决定。 */
@@ -42,7 +41,7 @@ final class RealmSectionMesher {
     }
 
     /** 境面层与其下的底板层：底板只在境面空洞或水面下露出顶面，侧面由着色器裁到领域外缘，遮住下方真实地形。 */
-    static void buildSurface(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos origin,
+    static void buildSurface(RealmGeometryContext context, BlockPos origin,
                              RealmMeshKey style, Material material) {
         BlockAndTintGetter region = context.getRegion();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
@@ -60,7 +59,7 @@ final class RealmSectionMesher {
         }
     }
 
-    private static void surfaceBlock(AddSectionGeometryEvent.SectionRenderingContext context, BlockAndTintGetter region, BlockPos pos,
+    private static void surfaceBlock(RealmGeometryContext context, BlockAndTintGetter region, BlockPos pos,
                                      BlockPos.MutableBlockPos side, RealmTerrain.Kind kind, int x, int z, int ry, Material material) {
         if (kind != RealmTerrain.Kind.SOLID && kind != RealmTerrain.Kind.WATER) return;
         boolean water = kind == RealmTerrain.Kind.WATER;
@@ -76,7 +75,7 @@ final class RealmSectionMesher {
         if (water) face(buffer, region, Direction.DOWN, x, ry + WATER_TOP, z, 0.0F, material.still, material.waterColor, light(region, pos), 255);
     }
 
-    private static void floorBlock(AddSectionGeometryEvent.SectionRenderingContext context, BlockAndTintGetter region, BlockPos pos,
+    private static void floorBlock(RealmGeometryContext context, BlockAndTintGetter region, BlockPos pos,
                                    BlockPos.MutableBlockPos side, boolean exposed, int x, int z, int ry, Material material) {
         VertexConsumer buffer = context.getOrCreateChunkBuffer(RenderType.solid());
         for (Direction dir : DIRECTIONS) {
@@ -103,12 +102,12 @@ final class RealmSectionMesher {
         for (int[] c : CORNERS[dir.ordinal()]) {
             float u = dir.getAxis() == Direction.Axis.X ? c[2] : c[0];
             float v = dir.getAxis() == Direction.Axis.Y ? c[2] : 1.0F - c[1] * top;
-            buffer.addVertex(x + c[0], y + c[1] * top, z + c[2]).setColor(r, g, b, alpha)
-                    .setUv(sprite.getU(u), sprite.getV(v)).setLight(light).setNormal(dir.getStepX(), dir.getStepY(), dir.getStepZ());
+            buffer.vertex(x + c[0], y + c[1] * top, z + c[2]).color(r, g, b, alpha)
+                    .uv(sprite.getU(u), sprite.getV(v)).uv2(light).normal(dir.getStepX(), dir.getStepY(), dir.getStepZ()).endVertex();
         }
     }
 
-    private static void fluidBoundary(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos pos, BlockPos origin,
+    private static void fluidBoundary(RealmGeometryContext context, BlockPos pos, BlockPos origin,
                                       BlockState state) {
         var region = context.getRegion();
         var fluid = state.getFluidState();
@@ -120,19 +119,22 @@ final class RealmSectionMesher {
             if (fluid.getType().isSame(neighbor.getFluidState().getType()) || neighbor.isSolidRender(region, side)) hidden |= 1 << dir.ordinal();
         }
         if (hidden == 0) return;
-        var sprites = FluidSpriteCache.getFluidSprites(region, pos, fluid);
-        int color = IClientFluidTypeExtensions.of(fluid).getTintColor(fluid, region, pos);
+        var extensions = IClientFluidTypeExtensions.of(fluid);
+        var atlas = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS);
+        var still = atlas.apply(extensions.getStillTexture(fluid, region, pos));
+        var flow = atlas.apply(extensions.getFlowingTexture(fluid, region, pos));
+        int color = extensions.getTintColor(fluid, region, pos);
         var layer = ItemBlockRenderTypes.getRenderLayer(fluid);
         var buffer = context.getOrCreateChunkBuffer(layer);
         float top = fluid.getHeight(region, pos);
         for (Direction dir : DIRECTIONS) {
             if ((hidden & (1 << dir.ordinal())) == 0) continue;
             face(buffer, region, dir, pos.getX() - origin.getX(), pos.getY() - origin.getY(), pos.getZ() - origin.getZ(),
-                    top, sprites[dir.getAxis().isHorizontal() ? 1 : 0], color, LevelRenderer.getLightColor(region, pos), color >>> 24);
+                    top, dir.getAxis().isHorizontal() ? flow : still, color, LevelRenderer.getLightColor(region, pos), color >>> 24);
         }
     }
 
-    static void buildBoundary(AddSectionGeometryEvent.SectionRenderingContext context, BlockPos origin) {
+    static void buildBoundary(RealmGeometryContext context, BlockPos origin) {
         BlockAndTintGetter region = context.getRegion();
         var dispatcher = Minecraft.getInstance().getBlockRenderer();
         var random = RandomSource.create();
