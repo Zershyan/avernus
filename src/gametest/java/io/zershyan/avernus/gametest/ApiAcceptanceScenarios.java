@@ -73,7 +73,7 @@ public final class ApiAcceptanceScenarios {
             expected.writeVarInt(form.traits().size());
             for (ResourceLocation trait : form.traits()) expected.writeResourceLocation(trait);
             helper.assertTrue(ByteBufUtil.equals(encoded, previousFormat), "API 迁移不得改变形态网络字节布局");
-            helper.assertTrue(form.equals(MirrorForms.read(new FriendlyByteBuf(encoded.duplicate()))) && !out.isReadable(), "形态编解码必须完整往返");
+            helper.assertTrue(form.equals(MirrorForms.read(out)) && !out.isReadable(), "形态编解码必须完整往返");
             var stack = new ItemStack(Items.STONE);
             var traits = new MirrorTraits(form.traits());
             MirrorTraits.write(stack, traits);

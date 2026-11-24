@@ -109,11 +109,20 @@ public final class RealmAttributeEffects {
                 if (!installed.contains(attribute)) remove(entity, attribute);
             }
         }
-        if (installed.isEmpty()) AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
+        // 1.20.1 的玩家没有跳跃强度属性，改用起跳速度倍率承载同一比例
+        Double jump = modifiers.get(Attributes.JUMP_STRENGTH);
+        double jumpBonus = jump != null && entity.getAttribute(Attributes.JUMP_STRENGTH) == null ? jump : 0.0;
+        if (installed.isEmpty() && jumpBonus == 0.0) AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
         else {
-            var state = new RealmAttributes(realm, installed);
+            var state = new RealmAttributes(realm, installed, jumpBonus);
             if (!state.equals(old)) AvernusAttachments.set(entity, AvernusAttachments.REALM_ATTRIBUTES, state);
         }
+    }
+
+    /** 境相给出的起跳速度比例，供跳跃 Mixin 读取。 */
+    public static double jumpBonus(LivingEntity entity) {
+        RealmAttributes state = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES);
+        return state == null ? 0.0 : state.jumpBonus();
     }
 
     /** 境彻底移除时立即撤销，避免最后一个境移除后没有后续 tick 能清理。 */

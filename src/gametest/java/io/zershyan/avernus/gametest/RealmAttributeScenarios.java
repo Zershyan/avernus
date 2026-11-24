@@ -52,10 +52,9 @@ public final class RealmAttributeScenarios {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             scene.update();
             assertAmount(helper, scene.owner(), Attributes.MOVEMENT_SPEED, 0.2);
-            assertAmount(helper, scene.owner(), Attributes.JUMP_STRENGTH, 0.2);
+            helper.assertTrue(Math.abs(RealmAttributeEffects.jumpBonus(scene.owner()) - 0.2) < 1.0E-9, "1.20.1 的跳跃比例必须记在起跳倍率上");
             assertAmount(helper, scene.target(), Attributes.MOVEMENT_SPEED, -0.2);
             assertValue(helper, scene.owner(), Attributes.MOVEMENT_SPEED, 0.24);
-            assertValue(helper, scene.owner(), Attributes.JUMP_STRENGTH, 0.504);
             assertValue(helper, scene.target(), Attributes.MOVEMENT_SPEED, 0.16);
             helper.assertTrue(AvernusApi.realmAt(scene.target()) == scene.realm(), "应查询到其他生物开启的境");
             helper.assertTrue(AvernusRealmAspects.UMBRAL.getId().equals(AvernusApi.aspectAt(scene.target())), "应返回幽冥境相 ID");

@@ -2,6 +2,8 @@ package io.zershyan.avernus.mixin.avernus.common;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import io.zershyan.avernus.realm.RealmAttributeEffects;
 import io.zershyan.avernus.realm.RealmPhysics;
 import io.zershyan.avernus.realm.RealmTraitEffects;
 import net.minecraft.core.BlockPos;
@@ -28,6 +30,12 @@ public abstract class MixinLivingEntity {
             target = "Lnet/minecraft/world/level/Level;getFluidState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/material/FluidState;"))
     private FluidState avernus$fluid(Level level, BlockPos pos, Operation<FluidState> original) {
         return RealmPhysics.fluid(level, (LivingEntity) (Object) this, pos, original.call(level, pos));
+    }
+
+    /** 1.20.1 没有通用跳跃强度属性，境相的跳跃比例在起跳速度上做独立乘区。 */
+    @ModifyReturnValue(method = "getJumpPower(F)F", at = @At("RETURN"))
+    private float avernus$realmJump(float original) {
+        return (float) (original * (1.0 + RealmAttributeEffects.jumpBonus((LivingEntity) (Object) this)));
     }
 
     @Inject(method = "checkTotemDeathProtection", at = @At("HEAD"), cancellable = true)
