@@ -1,0 +1,9 @@
+{
+  "type": "avernus:mirror_aspect",
+  "material": {
+    "item": "minecraft:amethyst_shard"
+  },
+  "result": {
+    "item": "avernus:silent_mirror"
+  }
+}

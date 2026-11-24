@@ -68,6 +68,16 @@ public class AvernusAttachments {
         return ForgeAttachmentApi.of(entity).map(holder -> holder.getExistingDataOrNull(type.get())).orElse(null);
     }
 
+    /** 清除冷却，供测试与重置流程使用，不在签名中暴露依赖类型。 */
+    /** 是否仍有境相属性来源，供不引用依赖类型的调用方使用。 */
+    public static boolean hasRealmAttributes(Entity entity) {
+        return has(entity, REALM_ATTRIBUTES);
+    }
+
+    public static void resetCooldown(Entity entity) {
+        set(entity, REALM_COOLDOWN, RealmCooldown.NONE);
+    }
+
     public static <T> void set(Entity entity, RegistryObject<AttachmentType<T>> type, T value) {
         ForgeAttachmentApi.of(entity).ifPresent(holder -> holder.setData(type.get(), value));
     }

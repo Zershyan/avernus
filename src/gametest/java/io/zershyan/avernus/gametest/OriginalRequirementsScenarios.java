@@ -9,7 +9,7 @@ import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.attachment.RealmCooldown;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.BlockHitResult;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
@@ -31,17 +31,19 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.MinecraftForgeMod;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.List;
 import java.util.Objects;
 
+@PrefixGameTestTemplate(false)
 @GameTestHolder(Avernus.MODID)
 public final class OriginalRequirementsScenarios {
     private static final BlockPos TARGET = new BlockPos(8, 2, 8);
 
-    @GameTest(template = "empty", batch = "re_audit_tnt", timeoutTicks = 250)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "re_audit_tnt", timeoutTicks = 250)
     public static void protectedRedstoneTntDoesNotCreateEntity(GameTestHelper helper) {
         var level = helper.getLevel();
         helper.setBlock(TARGET, Blocks.TNT);
@@ -50,11 +52,11 @@ public final class OriginalRequirementsScenarios {
         helper.startSequence().thenWaitUntil(() -> covered(helper, realm, target))
                 .thenExecute(() -> {
                     try {
-                        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+                        var player = testPlayer(helper);
                         var charge = new ItemStack(Items.FIRE_CHARGE, 3);
                         var hit = new BlockHitResult(Vec3.atCenterOf(target), Direction.UP, target, false);
-                        var use = level.getBlockState(target).useItemOn(charge, level, player, InteractionHand.MAIN_HAND, hit);
-                        helper.assertTrue(use == ItemInteractionResult.FAIL && charge.getCount() == 3, "受保护 TNT 不应消耗引燃物");
+                        var use = level.getBlockState(target).use(level, player, InteractionHand.MAIN_HAND, hit);
+                        helper.assertTrue(use == InteractionResult.FAIL && charge.getCount() == 3, "受保护 TNT 不应消耗引燃物");
                         helper.setBlock(TARGET.east(), Blocks.REDSTONE_BLOCK);
                         helper.assertBlockPresent(Blocks.TNT, TARGET);
                         var primed = level.getEntitiesOfClass(PrimedTnt.class, new AABB(target).inflate(2));
@@ -72,7 +74,7 @@ public final class OriginalRequirementsScenarios {
                 }).thenSucceed();
     }
 
-    @GameTest(template = "empty", batch = "re_audit_container", timeoutTicks = 250)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "re_audit_container", timeoutTicks = 250)
     public static void canceledPlacementLeavesNoContainerDrops(GameTestHelper helper) {
         var level = helper.getLevel();
         helper.setBlock(TARGET, Blocks.CHEST);
@@ -104,7 +106,7 @@ public final class OriginalRequirementsScenarios {
                 }).thenSucceed();
     }
 
-    @GameTest(template = "empty", batch = "re_audit_water", timeoutTicks = 250)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "re_audit_water", timeoutTicks = 250)
     public static void hiddenRealWaterDoesNotRaiseVirtualSurface(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos feet = helper.absolutePos(TARGET.below());
@@ -114,7 +116,7 @@ public final class OriginalRequirementsScenarios {
                     try {
                         var pig = helper.spawnWithNoFreeWill(EntityType.PIG, Vec3.atBottomCenterOf(TARGET.below()).add(0, 0.95, 0));
                         pig.setNoGravity(true);
-                        var water = NeoForgeMod.WATER_TYPE.value();
+                        var water = ForgeMod.WATER_TYPE.get();
                         pig.updateFluidHeightAndDoFluidPushing();
                         helper.assertTrue(pig.getFluidTypeHeight(water) == 0.0, "上方无真实水时，实体高于虚拟水面");
                         level.setBlock(feet.above(), Blocks.WATER.defaultBlockState(), Block.UPDATE_CLIENTS);
@@ -127,7 +129,7 @@ public final class OriginalRequirementsScenarios {
                 }).thenSucceed();
     }
 
-    @GameTest(template = "empty", batch = "re_audit_cooldown", timeoutTicks = 250)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "re_audit_cooldown", timeoutTicks = 250)
     public static void reloadDoesNotRestartAlreadySettledCooldown(GameTestHelper helper) {
         var level = helper.getLevel();
         var owner = owner(helper);
@@ -146,7 +148,7 @@ public final class OriginalRequirementsScenarios {
                 }).thenSucceed();
     }
 
-    @GameTest(template = "empty", batch = "re_audit_interrupted", timeoutTicks = 250)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "re_audit_interrupted", timeoutTicks = 250)
     public static void interruptedOpenSettlesOnlyOnce(GameTestHelper helper) {
         var owner = owner(helper);
         var level = helper.getLevel();
@@ -155,11 +157,16 @@ public final class OriginalRequirementsScenarios {
         RealmManager.PendingCooldowns.apply(owner);
         long remaining = RealmCooldowns.remaining(owner);
         helper.assertTrue(remaining == io.zershyan.avernus.registry.config.ServerConfig.CLOSE_COOLDOWN_TICKS.get(), "未结算的中断开境应补足一次冷却");
-        owner.setData(AvernusAttachments.REALM_COOLDOWN, RealmCooldown.NONE);
+        AvernusAttachments.resetCooldown(owner);
         RealmManager.PendingCooldowns.apply(owner);
         helper.assertTrue(RealmCooldowns.remaining(owner) == 0, "已结算的冷却到期后不能复活");
         helper.succeed();
     }
+    private static net.minecraftforge.common.util.FakePlayer testPlayer(GameTestHelper helper) {
+        return net.minecraftforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-player"));
+    }
+
     private static LivingEntity owner(GameTestHelper helper) {
         helper.setBlock(6, 1, 3, Blocks.STONE);
         return helper.spawnWithNoFreeWill(EntityType.PIG, new Vec3(6.5, 2.0, 3.5));

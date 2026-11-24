@@ -1,0 +1,9 @@
+{
+  "type": "avernus:mirror_aspect",
+  "material": {
+    "item": "minecraft:blaze_powder"
+  },
+  "result": {
+    "item": "avernus:infernal_mirror"
+  }
+}

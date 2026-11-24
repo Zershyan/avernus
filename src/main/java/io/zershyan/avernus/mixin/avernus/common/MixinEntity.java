@@ -69,20 +69,21 @@ public abstract class MixinEntity {
         return RealmPhysics.collision(level, (Entity) (Object) this, pos, original.call(level, pos));
     }
 
-    @WrapOperation(method = {"updateFluidHeightAndDoFluidPushing()V", "updateFluidOnEyes"}, at = @At(value = "INVOKE",
+    @WrapOperation(method = {"updateFluidHeightAndDoFluidPushing(Ljava/util/function/Predicate;)V", "updateFluidOnEyes"},
+            at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/material/FluidState;getHeight(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)F"))
     private float avernus$surface(FluidState fluid, BlockGetter level, BlockPos pos, Operation<Float> original) {
         float height = RealmPhysics.surfaceHeight(level, (Entity) (Object) this, pos, fluid);
         return height < 0.0F ? original.call(fluid, level, pos) : height;
     }
 
-    @WrapOperation(method = "updateFluidHeightAndDoFluidPushing()V", at = @At(value = "INVOKE",
+    @WrapOperation(method = "updateFluidHeightAndDoFluidPushing(Ljava/util/function/Predicate;)V", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/material/FluidState;getFlow(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/phys/Vec3;"))
     private Vec3 avernus$stillWater(FluidState fluid, BlockGetter level, BlockPos pos, Operation<Vec3> original) {
         var realm = RealmPhysics.realmAt(RealmPhysics.levelOf(level), (Entity) (Object) this, pos);
         return realm != null && pos.getY() == realm.height() - 1 ? Vec3.ZERO : original.call(fluid, level, pos);
     }
-    @WrapOperation(method = {"updateFluidHeightAndDoFluidPushing()V", "updateFluidOnEyes"},
+    @WrapOperation(method = {"updateFluidHeightAndDoFluidPushing(Ljava/util/function/Predicate;)V", "updateFluidOnEyes"},
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getFluidState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/material/FluidState;"))
     private FluidState avernus$fluid(Level level, BlockPos pos, Operation<FluidState> original) {
         return RealmPhysics.fluid(level, (Entity) (Object) this, pos, original.call(level, pos));

@@ -108,7 +108,6 @@ legacyForge {
 
         gameTestServer {
             type = "gameTestServer"
-            sourceSet = sourceSets.gametest
             gameDirectory = project.file('./run/gametest')
             systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
@@ -180,6 +179,9 @@ tasks.named('processResources', ProcessResources).configure {
         expand modMetadataProps
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // 开发运行使用 SRG 名，需把注解处理器生成的 refmap 放进运行时资源
+    from(layout.buildDirectory.dir('mixin')) { include "${mod_id}.refmap.json" }
+    dependsOn 'compileJava'
 }
 
 tasks.named('jar', Jar).configure {
@@ -242,6 +244,8 @@ tasks.register('finalizeArtifacts') {
         }
     }
 }
+
+tasks.named('check') { dependsOn 'runGameTestServer' }
 
 tasks.named('build') { finalizedBy 'finalizeArtifacts' }
 

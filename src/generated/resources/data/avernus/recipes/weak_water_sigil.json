@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:heart_of_the_sea"
+    }
+  ],
+  "result": {
+    "item": "avernus:weak_water_sigil"
+  }
+}

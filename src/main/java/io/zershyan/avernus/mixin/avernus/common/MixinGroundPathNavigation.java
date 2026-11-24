@@ -9,7 +9,6 @@ import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -19,9 +18,10 @@ public abstract class MixinGroundPathNavigation extends PathNavigation {
         super(mob, level);
     }
 
-    @WrapOperation(method = "createPath(Lnet/minecraft/core/BlockPos;I)Lnet/minecraft/world/level/pathfinder/Path;", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/LevelChunk;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
-    private BlockState avernus$target(LevelChunk chunk, BlockPos pos, Operation<BlockState> original) {
-        return RealmPhysics.collision(level, mob, pos, original.call(chunk, pos));
+    @WrapOperation(method = "createPath(Lnet/minecraft/core/BlockPos;I)Lnet/minecraft/world/level/pathfinder/Path;",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
+    private BlockState avernus$target(Level world, BlockPos pos, Operation<BlockState> original) {
+        return RealmPhysics.collision(world, mob, pos, original.call(world, pos));
     }
 
     @WrapOperation(method = "getSurfaceY", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))

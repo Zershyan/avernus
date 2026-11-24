@@ -19,7 +19,7 @@ public abstract class MixinPathNavigation {
     @Final
     protected Mob mob;
 
-    @Redirect(method = "createPath(Lnet/minecraft/core/BlockPos;I)Lnet/minecraft/world/level/pathfinder/Path;",
+    @Redirect(method = "createPath(Ljava/util/Set;IZIF)Lnet/minecraft/world/level/pathfinder/Path;",
             at = @At(value = "NEW", target = "(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/PathNavigationRegion;"))
     private PathNavigationRegion avernus$bindSubject(Level level, BlockPos from, BlockPos to) {
         PathNavigationRegion region = new PathNavigationRegion(level, from, to);

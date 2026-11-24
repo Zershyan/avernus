@@ -1,6 +1,5 @@
 package io.zershyan.avernus.gametest;
 
-import com.mojang.serialization.JsonOps;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.zershyan.avernus.api.AvernusApi;
@@ -16,7 +15,7 @@ import io.zershyan.avernus.realm.RealmManager;
 import io.zershyan.avernus.registry.data_component.MirrorTraits;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
@@ -24,6 +23,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Modifier;
@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+@PrefixGameTestTemplate(false)
 @GameTestHolder(AvernusApi.MODID)
 public final class ApiAcceptanceScenarios {
     private static final ResourceLocation UMBRAL = id("umbral");
@@ -44,7 +45,7 @@ public final class ApiAcceptanceScenarios {
     private static final ResourceLocation FREEDOM = id("freedom");
     private static final ResourceLocation MISSING = id("missing_api_test");
 
-    @GameTest(template = "empty", batch = "api_signatures")
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "api_signatures")
     public static void publicSignaturesDoNotExposeInternals(GameTestHelper helper) {
         for (Class<?> api : List.of(AvernusApi.class, MirrorForm.class, RealmView.class, RealmResult.class,
                 RealmPhase.class, RealmEvent.class, RealmAttributeEvent.class, MirrorTraitRecipeView.class)) {
@@ -53,7 +54,7 @@ public final class ApiAcceptanceScenarios {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", batch = "api_form")
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "api_form")
     public static void immutableFormsPreserveWireAndComponentFormat(GameTestHelper helper) {
         var input = new ArrayList<>(List.of(FREEDOM, EQUALITY, FREEDOM));
         var form = new MirrorForm(UMBRAL, input);
@@ -65,17 +66,18 @@ public final class ApiAcceptanceScenarios {
         var encoded = Unpooled.buffer();
         var previousFormat = Unpooled.buffer();
         try {
-            MirrorForms.STREAM_CODEC.encode(encoded, form);
-            ResourceLocation.STREAM_CODEC.encode(previousFormat, form.aspect());
-            ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs.list(MirrorForm.MAX_TRAITS)).encode(previousFormat, form.traits());
+            var out = new FriendlyByteBuf(encoded);
+            MirrorForms.write(out, form);
+            var expected = new FriendlyByteBuf(previousFormat);
+            expected.writeResourceLocation(form.aspect());
+            expected.writeVarInt(form.traits().size());
+            for (ResourceLocation trait : form.traits()) expected.writeResourceLocation(trait);
             helper.assertTrue(ByteBufUtil.equals(encoded, previousFormat), "API 迁移不得改变形态网络字节布局");
-            helper.assertTrue(form.equals(MirrorForms.STREAM_CODEC.decode(encoded)) && !encoded.isReadable(), "形态编解码必须完整往返");
-            encoded.clear();
+            helper.assertTrue(form.equals(MirrorForms.read(new FriendlyByteBuf(encoded.duplicate()))) && !out.isReadable(), "形态编解码必须完整往返");
+            var stack = new ItemStack(Items.STONE);
             var traits = new MirrorTraits(form.traits());
-            MirrorTraits.STREAM_CODEC.encode(encoded, traits);
-            helper.assertTrue(traits.equals(MirrorTraits.STREAM_CODEC.decode(encoded)), "数据组件网络格式必须往返");
-            var json = MirrorTraits.CODEC.encodeStart(JsonOps.INSTANCE, traits).getOrThrow();
-            helper.assertTrue(traits.equals(MirrorTraits.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow()), "数据组件持久化格式必须往返");
+            MirrorTraits.write(stack, traits);
+            helper.assertTrue(traits.equals(MirrorTraits.read(stack)), "境印 NBT 必须完整往返");
         } finally {
             encoded.release();
             previousFormat.release();
@@ -86,7 +88,7 @@ public final class ApiAcceptanceScenarios {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", batch = "api_mirrors")
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "api_mirrors")
     public static void mirrorsAreCreatedOnlyFromValidPublicForms(GameTestHelper helper) {
         var items = AvernusApi.mirrorItems();
         helper.assertTrue(!items.isEmpty(), "镜子物品查询不得为空");
@@ -107,12 +109,12 @@ public final class ApiAcceptanceScenarios {
         helper.assertTrue(AvernusApi.createMirror(new MirrorForm(UMBRAL, List.of(MISSING))).isEmpty(), "未知类型不得创建镜子");
         helper.assertTrue(AvernusApi.createMirror(new MirrorForm(UMBRAL, List.of(id("boundless"), id("weak_water")))).isEmpty(), "互斥类型不得创建镜子");
         long recipes = helper.getLevel().getRecipeManager().getAllRecipesFor(RecipeType.SMITHING).stream()
-                .filter(holder -> holder.value() instanceof MirrorTraitRecipeView).count();
+                .filter(recipe -> recipe instanceof MirrorTraitRecipeView).count();
         helper.assertTrue(recipes > 0, "类型配方必须可经公开只读接口访问");
         helper.succeed();
     }
 
-    @GameTest(template = "empty", batch = "api_lifecycle")
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "api_lifecycle")
     public static void lifecycleUsesPublicResultsAndViews(GameTestHelper helper) {
         var level = helper.getLevel();
         var owner = helper.spawn(EntityType.ARMOR_STAND, new Vec3(8.5, 2, 8.5));
@@ -143,7 +145,7 @@ public final class ApiAcceptanceScenarios {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", batch = "api_coverage", timeoutTicks = 250)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "api_coverage", timeoutTicks = 250)
     public static void realmQueriesFollowActualCoverage(GameTestHelper helper) {
         var level = helper.getLevel();
         var owner = helper.spawn(EntityType.ARMOR_STAND, new Vec3(8.5, 2, 8.5));

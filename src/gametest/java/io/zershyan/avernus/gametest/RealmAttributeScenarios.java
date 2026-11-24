@@ -30,6 +30,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
@@ -41,11 +42,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /** 境相属性与两级事件的服务端回归；各场景独占批次，监听器和配置均在同一 tick 内还原。 */
+@PrefixGameTestTemplate(false)
 @GameTestHolder(Avernus.MODID)
 public final class RealmAttributeScenarios {
     private static final UUID MODIFIER = UUID.nameUUIDFromBytes("avernus:realm_aspect".getBytes(StandardCharsets.UTF_8));
 
-    @GameTest(template = "empty", batch = "aspect_umbral", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_umbral", timeoutTicks = 260)
     public static void umbralUsesIndependentTransientMultipliers(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             scene.update();
@@ -67,7 +69,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_infernal", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_infernal", timeoutTicks = 260)
     public static void infernalMultipliesAfterForeignModifiers(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.INFERNAL.getId(), scene -> {
             AttributeInstance attack = attribute(scene.owner(), Attributes.ATTACK_DAMAGE);
@@ -84,11 +86,11 @@ public final class RealmAttributeScenarios {
             assertValue(helper, scene.target(), Attributes.ATTACK_DAMAGE, 8.0);
             scene.close();
             assertValue(helper, scene.owner(), Attributes.ATTACK_DAMAGE, 27.0);
-            helper.assertTrue(attack.hasModifier(add.getId()) && attack.hasModifier(base.getId()) && attack.hasModifier(total.getId()), "不得删除其他来源修饰");
+            helper.assertTrue(attack.getModifier(add.getId()) != null && attack.getModifier(base.getId()) != null && attack.getModifier(total.getId()) != null, "不得删除其他来源修饰");
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_silent", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_silent", timeoutTicks = 260)
     public static void silentScalesArmorAndToughness(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.SILENT.getId(), scene -> {
             scene.update();
@@ -106,7 +108,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_event_chain", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_event_chain", timeoutTicks = 260)
     public static void configurationFlowsThroughBothEventsWithoutLeakingTargets(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             double old = ServerConfig.UMBRAL_OWNER_SPEED_BONUS.get();
@@ -143,7 +145,7 @@ public final class RealmAttributeScenarios {
                 assertValue(helper, scene.owner(), Attributes.MOVEMENT_SPEED, 0.32);
                 assertValue(helper, scene.target(), Attributes.MOVEMENT_SPEED, 0.18);
                 assertValue(helper, scene.other(), Attributes.MOVEMENT_SPEED, 0.14);
-                helper.assertFalse(attribute(scene.target(), Attributes.MAX_HEALTH).hasModifier(MODIFIER), "目标删除条目后不应施加");
+                helper.assertFalse(attribute(scene.target(), Attributes.MAX_HEALTH).getModifier(MODIFIER) != null, "目标删除条目后不应施加");
                 assertAmount(helper, scene.other(), Attributes.MAX_HEALTH, 0.25);
                 helper.assertTrue(scene.other().getAttribute(Attributes.LUCK) == null, "缺少的属性不得强行创建");
             } finally {
@@ -154,7 +156,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_cancel", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_cancel", timeoutTicks = 260)
     public static void cancelingEitherEventRevokesPreviousModifiers(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             scene.update();
@@ -186,7 +188,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_friends", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_friends", timeoutTicks = 260)
     public static void teamsAndPetsAreExcludedEvenWithFriendlyFire(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             var scoreboard = helper.getLevel().getScoreboard();
@@ -219,7 +221,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_pvp", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_pvp", timeoutTicks = 260)
     public static void disabledPvpProtectsPlayersButNotOrdinaryMobs(GameTestHelper helper) {
         var owner = player(helper, 5.5);
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), owner, List.of(), scene -> {
@@ -248,7 +250,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_scope", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_scope", timeoutTicks = 260)
     public static void effectsAndQueriesFollowActualEntityCoverage(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             scene.update();
@@ -269,7 +271,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_isolation", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_isolation", timeoutTicks = 260)
     public static void isolationDoesNotAffectOtherEntities(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), mob(helper, 5.5), List.of(AvernusRealmTraits.ISOLATION.getId()), scene -> {
             scene.update();
@@ -280,7 +282,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_config", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_config", timeoutTicks = 260)
     public static void liveConfigurationAndZeroValuesReplaceOldModifiers(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             double speed = ServerConfig.UMBRAL_OWNER_SPEED_BONUS.get();
@@ -307,7 +309,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_overlap", timeoutTicks = 400)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_overlap", timeoutTicks = 400)
     public static void newestRealmReplacesRatherThanStacksAttributes(GameTestHelper helper) {
         reset(helper);
         LivingEntity owner = mob(helper, 5.5);
@@ -325,14 +327,14 @@ public final class RealmAttributeScenarios {
                     try {
                         RealmAttributeEffects.tick(helper.getLevel());
                         helper.assertTrue(AvernusApi.realmAt(target) == newer[0], "重叠处须选择最新适用境");
-                        helper.assertFalse(attribute(owner, Attributes.MOVEMENT_SPEED).hasModifier(MODIFIER), "旧境移速不得残留");
+                        helper.assertFalse(attribute(owner, Attributes.MOVEMENT_SPEED).getModifier(MODIFIER) != null, "旧境移速不得残留");
                         assertAmount(helper, owner, Attributes.ATTACK_DAMAGE, -0.2);
                         assertAmount(helper, newerOwner, Attributes.ATTACK_DAMAGE, 0.2);
                         RealmManager.emergencyClose(helper.getLevel(), newer[0]);
                         RealmAttributeEffects.tick(helper.getLevel());
                         helper.assertTrue(AvernusApi.realmAt(target) == older, "新境移除后应回到旧境");
                         assertAmount(helper, owner, Attributes.MOVEMENT_SPEED, 0.2);
-                        helper.assertFalse(attribute(owner, Attributes.ATTACK_DAMAGE).hasModifier(MODIFIER), "新境攻击减益不得残留");
+                        helper.assertFalse(attribute(owner, Attributes.ATTACK_DAMAGE).getModifier(MODIFIER) != null, "新境攻击减益不得残留");
                     } finally {
                         RealmManager.emergencyClose(helper.getLevel(), newer[0]);
                         RealmManager.emergencyClose(helper.getLevel(), older);
@@ -340,7 +342,7 @@ public final class RealmAttributeScenarios {
                 }).thenSucceed();
     }
 
-    @GameTest(template = "empty", batch = "aspect_closing", timeoutTicks = 400)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_closing", timeoutTicks = 400)
     public static void normalContractionClearsEffectsWhenCoverageRecedes(GameTestHelper helper) {
         reset(helper);
         LivingEntity owner = mob(helper, 5.5);
@@ -360,7 +362,7 @@ public final class RealmAttributeScenarios {
                 }).thenSucceed();
     }
 
-    @GameTest(template = "empty", batch = "aspect_event_mutation", timeoutTicks = 260)
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_event_mutation", timeoutTicks = 260)
     public static void listenersMayChangeTeamsOrCloseRealmsWithoutStaleEffects(GameTestHelper helper) {
         withRealm(helper, AvernusRealmAspects.UMBRAL.getId(), scene -> {
             scene.update();
@@ -394,7 +396,7 @@ public final class RealmAttributeScenarios {
         });
     }
 
-    @GameTest(template = "empty", batch = "aspect_event_validation")
+    @GameTest(templateNamespace = "avernus", template = "empty", batch = "aspect_event_validation")
     public static void modifierTablesValidateAndDefensivelyCopyValues(GameTestHelper helper) {
         Map<Attribute, Double> initial = new HashMap<>();
         initial.put(Attributes.MOVEMENT_SPEED, 0.2);
@@ -435,7 +437,7 @@ public final class RealmAttributeScenarios {
     }
 
     private static void withRealm(GameTestHelper helper, ResourceLocation aspect, Consumer<Scene> action) {
-        withRealm(helper, aspect, mob(helper, 5.5), List.of(), action);
+        withRealm(helper, aspect, player(helper, 5.5), List.of(), action);
     }
 
     private static void withRealm(GameTestHelper helper, ResourceLocation aspect, LivingEntity owner,
@@ -488,11 +490,17 @@ public final class RealmAttributeScenarios {
     private static void configure(LivingEntity entity) {
         entity.setNoGravity(true);
         entity.setInvulnerable(true);
-        attribute(entity, Attributes.MOVEMENT_SPEED).setBaseValue(0.2);
-        attribute(entity, Attributes.JUMP_STRENGTH).setBaseValue(0.42);
-        attribute(entity, Attributes.ATTACK_DAMAGE).setBaseValue(10.0);
-        attribute(entity, Attributes.ARMOR).setBaseValue(8.0);
-        attribute(entity, Attributes.ARMOR_TOUGHNESS).setBaseValue(4.0);
+        setBase(entity, Attributes.MOVEMENT_SPEED, 0.2);
+        setBase(entity, Attributes.JUMP_STRENGTH, 0.42);
+        setBase(entity, Attributes.ATTACK_DAMAGE, 10.0);
+        setBase(entity, Attributes.ARMOR, 8.0);
+        setBase(entity, Attributes.ARMOR_TOUGHNESS, 4.0);
+    }
+
+    /** 部分生物没有跳跃或攻击属性，只调整实际存在的属性。 */
+    private static void setBase(LivingEntity entity, Attribute key, double value) {
+        AttributeInstance instance = entity.getAttribute(key);
+        if (instance != null) instance.setBaseValue(value);
     }
 
     private static void covered(GameTestHelper helper, Realm realm, LivingEntity target) {
@@ -518,8 +526,8 @@ public final class RealmAttributeScenarios {
         for (Attribute key : List.of(Attributes.MOVEMENT_SPEED, Attributes.JUMP_STRENGTH, Attributes.ATTACK_DAMAGE,
                 Attributes.ARMOR, Attributes.ARMOR_TOUGHNESS, Attributes.MAX_HEALTH)) {
             AttributeInstance value = entity.getAttribute(key);
-            helper.assertTrue(value == null || !value.hasModifier(MODIFIER), "不应残留境相修饰：" + key);
+            helper.assertTrue(value == null || value.getModifier(MODIFIER) == null, "不应残留境相修饰：" + key);
         }
-        helper.assertTrue(AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES) == null, "不应残留属性来源附件");
+        helper.assertFalse(AvernusAttachments.hasRealmAttributes(entity), "不应残留属性来源附件");
     }
 }

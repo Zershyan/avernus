@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.List;
  * 场地：y=1 为石头地面，所有者站在 y=2，故领域高度 H 对应相对 y=2；H 及以上的真实方块应被抹平，世界本身不得改变。
  * 各测试独占批次，避免 128 格领域互相干扰。
  */
+@PrefixGameTestTemplate(false)
 @GameTestHolder(Avernus.MODID)
 public final class RealmGameTests {
     private static final String TEMPLATE = "empty";
@@ -45,7 +47,7 @@ public final class RealmGameTests {
     private RealmGameTests() {
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_stand", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_stand", timeoutTicks = TIMEOUT)
     public static void standOnFlattenedTop(GameTestHelper helper) {
         floor(helper);
         fill(helper, Blocks.STONE, 6, H, 8, 6, H + 4, 8);
@@ -58,7 +60,7 @@ public final class RealmGameTests {
                 .thenExecute(() -> inHole.add(helper.spawn(EntityType.ARMOR_STAND, new Vec3(3.5, H + 0.5, 8.5))))
                 .thenWaitUntil(() -> {
                     assertStandsAt(helper, onPillar, H);
-                    assertStandsAt(helper, inHole.getFirst(), H - 1);
+                    assertStandsAt(helper, inHole.get(0), H - 1);
                 })
                 .thenExecute(() -> {
                     for (int y = H; y <= H + 4; y++) helper.assertBlockPresent(Blocks.STONE, 6, y, 8);
@@ -68,7 +70,7 @@ public final class RealmGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_swim", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_swim", timeoutTicks = TIMEOUT)
     public static void swimInVirtualWater(GameTestHelper helper) {
         floor(helper);
         Realm realm = open(helper, AvernusRealmTraits.WEAK_WATER.getId());
@@ -77,7 +79,7 @@ public final class RealmGameTests {
                 .thenWaitUntil(() -> assertCovered(helper, realm, 6, 8, 6, 8))
                 .thenExecute(() -> pig.add(helper.spawnWithNoFreeWill(EntityType.PIG, new Vec3(6.5, H - 0.8, 8.5))))
                 .thenWaitUntil(() -> {
-                    Pig p = pig.getFirst();
+                    Pig p = pig.get(0);
                     helper.assertTrue(p.isInWater(), "猪应处于虚拟水中");
                     helper.assertTrue(p.isEyeInFluid(FluidTags.WATER), "猪的眼部应在虚拟水中");
                     helper.assertFalse(p.isInWall(), "猪不应在真实地面中窒息");
@@ -87,7 +89,7 @@ public final class RealmGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_arrow", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_arrow", timeoutTicks = TIMEOUT)
     public static void arrowPassesFlattenedWall(GameTestHelper helper) {
         floor(helper);
         fill(helper, Blocks.STONE, 3, H, 9, 9, H + 3, 9);
@@ -101,13 +103,13 @@ public final class RealmGameTests {
                     a.setDeltaMovement(0.0, 0.0, 1.5);
                     arrow.add(a);
                 })
-                .thenWaitUntil(() -> helper.assertTrue(arrow.getFirst().getZ() > wallZ + 1.0, "箭矢应穿过被抹平的墙"))
+                .thenWaitUntil(() -> helper.assertTrue(arrow.get(0).getZ() > wallZ + 1.0, "箭矢应穿过被抹平的墙"))
                 .thenExecute(() -> helper.assertBlockPresent(Blocks.STONE, 6, H + 1, 9))
                 .thenExecute(() -> close(helper, realm))
                 .thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_path", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_path", timeoutTicks = TIMEOUT)
     public static void pathThroughFlattenedPen(GameTestHelper helper) {
         floor(helper);
         fill(helper, Blocks.STONE, 3, H, 5, 9, H + 2, 5);
@@ -130,7 +132,7 @@ public final class RealmGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_path_flat", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_path_flat", timeoutTicks = TIMEOUT)
     public static void walkOverFlattenedStepsWithoutJumping(GameTestHelper helper) {
         floor(helper);
         for (int z = 7; z <= 13; z += 3) fill(helper, Blocks.STONE, 3, H, z, 9, H, z);
@@ -152,7 +154,7 @@ public final class RealmGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_protect", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_protect", timeoutTicks = TIMEOUT)
     public static void protectAgainstExplosionAndFalling(GameTestHelper helper) {
         floor(helper);
         fill(helper, Blocks.STONE, 6, H, 10, 6, H + 1, 10);
@@ -166,7 +168,7 @@ public final class RealmGameTests {
                     t.setFuse(5);
                     tnt.add(t);
                 })
-                .thenWaitUntil(() -> helper.assertTrue(tnt.getFirst().isRemoved(), "TNT 应已爆炸"))
+                .thenWaitUntil(() -> helper.assertTrue(tnt.get(0).isRemoved(), "TNT 应已爆炸"))
                 .thenIdle(5)
                 .thenExecute(() -> {
                     helper.assertBlockPresent(Blocks.STONE, 6, H, 10);
@@ -178,7 +180,7 @@ public final class RealmGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_decay", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_decay", timeoutTicks = TIMEOUT)
     public static void protectLeafDecayAndDirectBreak(GameTestHelper helper) {
         BlockPos rel = new BlockPos(8, H, 8);
         helper.setBlock(rel, Blocks.OAK_LEAVES);
@@ -204,15 +206,15 @@ public final class RealmGameTests {
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_place_multi", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_place_multi", timeoutTicks = TIMEOUT)
     public static void rejectReplacementInLaterPlacementSnapshot(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos first = helper.absolutePos(new BlockPos(7, H, 8));
         BlockPos second = first.south();
         level.setBlockAndUpdate(first.below(), Blocks.STONE.defaultBlockState());
         level.setBlockAndUpdate(second.below(), Blocks.STONE.defaultBlockState());
-        level.setBlockAndUpdate(second, Blocks.SHORT_GRASS.defaultBlockState());
-        var player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        level.setBlockAndUpdate(second, Blocks.GRASS.defaultBlockState());
+        var player = testPlayer(helper);
         player.setYRot(0);
         var hand = net.minecraft.world.InteractionHand.MAIN_HAND;
         var bed = new ItemStack(Items.RED_BED, 2);
@@ -223,18 +225,18 @@ public final class RealmGameTests {
         helper.startSequence().thenWaitUntil(() -> assertCovered(helper, realm, 7, 8, 7, 9))
                 .thenExecute(() -> {
                     try {
-                        helper.assertFalse(net.minecraftforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "领域内如冒险模式，床不得放置");
-                        helper.assertTrue(level.isEmptyBlock(first) && level.getBlockState(second).is(Blocks.SHORT_GRASS), "床尾应回滚，草不应被替换");
+                        helper.assertFalse(net.minecraftforge.common.ForgeHooks.onPlaceItemIntoWorld(use).consumesAction(), "领域内如冒险模式，床不得放置");
+                        helper.assertTrue(level.isEmptyBlock(first) && level.getBlockState(second).is(Blocks.GRASS), "床尾应回滚，草不应被替换");
                         helper.assertTrue(bed.getCount() == 2, "失败不能消耗物品");
                     } finally {
                         close(helper, realm);
                     }
-                    helper.assertTrue(net.minecraftforge.common.CommonHooks.onPlaceItemIntoWorld(use).consumesAction(), "关境后应恢复正常双格放置");
+                    helper.assertTrue(net.minecraftforge.common.ForgeHooks.onPlaceItemIntoWorld(use).consumesAction(), "关境后应恢复正常双格放置");
                     helper.assertTrue(level.getBlockState(first).is(Blocks.RED_BED) && level.getBlockState(second).is(Blocks.RED_BED) && bed.getCount() == 1, "区外两半床与物品消耗应一致");
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_fall_once", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_fall_once", timeoutTicks = TIMEOUT)
     public static void firstContactOnLandingIsGuardedOnlyOnce(GameTestHelper helper) {
         floor(helper);
         Realm realm = open(helper);
@@ -258,7 +260,7 @@ public final class RealmGameTests {
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_rebirth_opening", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_rebirth_opening", timeoutTicks = TIMEOUT)
     public static void rebirthWaitsUntilCovered(GameTestHelper helper) {
         floor(helper);
         var level = helper.getLevel();
@@ -270,7 +272,7 @@ public final class RealmGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_rebirth_active", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_rebirth_active", timeoutTicks = TIMEOUT)
     public static void rebirthDoesNotConsumeTotem(GameTestHelper helper) {
         floor(helper);
         var level = helper.getLevel();
@@ -288,7 +290,7 @@ public final class RealmGameTests {
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_restore_edge", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_restore_edge", timeoutTicks = TIMEOUT)
     public static void restoreVehicleWhenOnlyAdjacentColumnChanges(GameTestHelper helper) {
         floor(helper);
         fill(helper, Blocks.STONE, 9, H, 8, 9, H + 1, 9);
@@ -322,13 +324,13 @@ public final class RealmGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_illusion", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_illusion", timeoutTicks = TIMEOUT)
     public static void illusionKeepsIndividualRetaliation(GameTestHelper helper) {
         floor(helper);
         var level = helper.getLevel();
         Realm realm = open(helper, AvernusRealmTraits.ILLUSION.getId());
-        var attacker = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
-        var bystander = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        var attacker = testPlayer(helper);
+        var bystander = testPlayer(helper);
         attacker.setPos(helper.absoluteVec(new Vec3(7.5, H, 7.5)));
         bystander.setPos(helper.absoluteVec(new Vec3(9.5, H, 7.5)));
         var zombie = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new Vec3(8.0, H, 8.5));
@@ -354,7 +356,7 @@ public final class RealmGameTests {
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_observe_order", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_observe_order", timeoutTicks = TIMEOUT)
     public static void rejectStaleObservationPackets(GameTestHelper helper) {
         var set = new io.zershyan.avernus.realm.RealmSet();
         set.beginUpdates(3);
@@ -367,7 +369,7 @@ public final class RealmGameTests {
         helper.assertTrue(set.acceptUpdate(4, 1), "新的观察流应独立接收状态");
         helper.succeed();
     }
-    @GameTest(template = TEMPLATE, batch = "avernus_rebirth_overlap", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_rebirth_overlap", timeoutTicks = TIMEOUT)
     public static void newerRealmOverridesRebirth(GameTestHelper helper) {
         floor(helper);
         var level = helper.getLevel();
@@ -390,7 +392,7 @@ public final class RealmGameTests {
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_rebirth_outside", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_rebirth_outside", timeoutTicks = TIMEOUT)
     public static void rebirthDoesNotProtectOwnerOutsideRealm(GameTestHelper helper) {
         floor(helper);
         var level = helper.getLevel();
@@ -409,25 +411,26 @@ public final class RealmGameTests {
                 }).thenSucceed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_snapshot", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_snapshot", timeoutTicks = TIMEOUT)
     public static void snapshotFreezesMotionAndRoundTrips(GameTestHelper helper) {
         floor(helper);
         var level = helper.getLevel();
         var owner = helper.spawnWithNoFreeWill(EntityType.PIG, new Vec3(6.5, H, 2.5));
         Realm realm = openFor(helper, owner, AvernusRealmTraits.ETERNITY.getId());
         var before = realm.snapshot();
-        var bytes = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), level.registryAccess());
+        io.netty.buffer.ByteBuf raw = io.netty.buffer.Unpooled.buffer();
+        var bytes = new net.minecraft.network.FriendlyByteBuf(raw);
         try {
-            Realm.Snapshot.STREAM_CODEC.encode(bytes, before);
-            var decoded = Realm.Snapshot.STREAM_CODEC.decode(bytes);
+            before.write(bytes);
+            var decoded = Realm.Snapshot.read(bytes);
             helper.assertTrue(before.equals(decoded), "完整领域快照编码后须逐项一致");
             double height = realm.height();
             owner.teleportTo(owner.getX() + 5, owner.getY() + 3, owner.getZ() + 2);
             helper.assertTrue(realm.teleportSeq() == before.motion().teleportSeq() + 1, "短距离传送也必须记录瞬贴序号");
             helper.assertTrue(realm.height() == height && realm.sequence() == before.sequence(), "移动不得改变抹平高度或优先级");
             helper.assertTrue(!before.motion().equals(realm.motion()), "发送后的不可变快照不得跟着服务端改变");
-            Realm.Motion.STREAM_CODEC.encode(bytes, realm.motion());
-            var moved = Realm.Motion.STREAM_CODEC.decode(bytes);
+            realm.motion().write(bytes);
+            var moved = Realm.Motion.read(bytes);
             Realm copy = decoded.instantiate();
             if (copy == null) throw new AssertionError("无法重建领域快照");
             copy.applyMotion(moved);
@@ -435,13 +438,13 @@ public final class RealmGameTests {
             helper.assertTrue(copy.motion().equals(moved), "旧修订不能覆盖最新增量");
             helper.assertTrue(bytes.readableBytes() == 0, "Codec 应完整消费数据");
         } finally {
-            bytes.release();
+            raw.release();
             close(helper, realm);
         }
         helper.succeed();
     }
 
-    @GameTest(template = TEMPLATE, batch = "avernus_coverage", timeoutTicks = TIMEOUT)
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_coverage", timeoutTicks = TIMEOUT)
     public static void coverageTilesMatchAuthoritativeColumns(GameTestHelper helper) {
         floor(helper);
         Realm realm = open(helper);
@@ -470,6 +473,11 @@ public final class RealmGameTests {
             close(helper, realm);
         }
         helper.succeed();
+    }
+
+    private static net.minecraftforge.common.util.FakePlayer testPlayer(GameTestHelper helper) {
+        return net.minecraftforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-player"));
     }
 
     private static Realm openFor(GameTestHelper helper, net.minecraft.world.entity.LivingEntity owner, ResourceLocation... traits) {
