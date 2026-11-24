@@ -62,8 +62,8 @@ public class MirrorEntity extends Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(REALM, Optional.empty());
+    protected void defineSynchedData() {
+        entityData.define(REALM, Optional.empty());
     }
 
     @Override

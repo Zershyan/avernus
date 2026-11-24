@@ -7,7 +7,6 @@ import net.minecraft.world.level.block.piston.PistonStructureResolver;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
-import net.minecraftforge.event.level.BlockDropsEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.event.level.PistonEvent;
@@ -27,13 +26,6 @@ public final class RealmProtectionHandler {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingDestroy(LivingDestroyBlockEvent event) {
         if (RealmProtection.isProtected(event.getEntity().level(), event.getPos())) event.setCanceled(true);
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onBlockDrops(BlockDropsEvent event) {
-        var level = event.getLevel();
-        if (RealmProtection.isProtected(level, event.getPos())
-                && level.getBlockState(event.getPos()).is(event.getState().getBlock())) event.setCanceled(true);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

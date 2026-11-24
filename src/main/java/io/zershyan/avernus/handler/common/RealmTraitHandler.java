@@ -2,13 +2,13 @@ package io.zershyan.avernus.handler.common;
 
 import io.zershyan.avernus.realm.RealmTraitEffects;
 import net.minecraft.world.entity.Mob;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
-import net.minecraftforge.event.entity.living.LivingIncomingDamageEvent;
-import net.minecraftforge.event.tick.EntityTickEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /** 境印效果事件：湮没、虚妄、幻化；往生经由 MixinLivingEntity 先于图腾触发。 */
 public final class RealmTraitHandler {
@@ -21,13 +21,13 @@ public final class RealmTraitHandler {
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
-    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+    public static void onAttack(LivingAttackEvent event) {
         if (RealmTraitEffects.negatesDamage(event.getEntity(), event.getSource())) event.setCanceled(true);
     }
 
     @SubscribeEvent
-    public static void onDamaged(LivingDamageEvent.Post event) {
-        if (event.getNewDamage() > 0.0F) RealmTraitEffects.recordRetaliation(event.getEntity(), event.getSource());
+    public static void onDamaged(LivingDamageEvent event) {
+        if (event.getAmount() > 0.0F) RealmTraitEffects.recordRetaliation(event.getEntity(), event.getSource());
     }
 
     @SubscribeEvent
@@ -39,7 +39,7 @@ public final class RealmTraitHandler {
     }
 
     @SubscribeEvent
-    public static void onEntityTick(EntityTickEvent.Pre event) {
+    public static void onLivingTick(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Mob mob) RealmTraitEffects.suppressTargets(mob);
     }
 }

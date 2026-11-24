@@ -38,6 +38,11 @@ public abstract class MixinEntity {
         if (ci.getReturnValueZ() && entity.level() == level) RealmManager.ownerTeleported(entity);
     }
 
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void avernus$vehiclePresence(CallbackInfo ci) {
+        if ((Object) this instanceof net.minecraft.world.entity.vehicle.VehicleEntity vehicle) RealmPresenceTracker.tick(vehicle);
+    }
+
     @Inject(method = "checkFallDamage", at = @At("HEAD"))
     private void avernus$beforeFallCheck(double dy, boolean onGround, BlockState state, BlockPos pos, CallbackInfo ci) {
         if ((Object) this instanceof LivingEntity living) RealmPresenceTracker.beforeFallCheck(living, onGround, dy, pos);

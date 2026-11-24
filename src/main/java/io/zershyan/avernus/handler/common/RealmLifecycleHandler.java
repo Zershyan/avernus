@@ -15,7 +15,7 @@ import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.event.tick.LevelTickEvent;
+import net.minecraftforge.event.TickEvent;
 
 /** 领域的服务端生命周期：维持、所有者死亡/下线/跨维度时紧急关闭、登录与切维度时同步。 */
 public final class RealmLifecycleHandler {
@@ -23,8 +23,8 @@ public final class RealmLifecycleHandler {
     }
 
     @SubscribeEvent
-    public static void onLevelTick(LevelTickEvent.Post event) {
-        if (event.getLevel() instanceof ServerLevel level) RealmManager.tick(level);
+    public static void onLevelTick(TickEvent.LevelTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) RealmManager.tick(level);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -44,7 +44,7 @@ public final class RealmLifecycleHandler {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            RealmManager.emergencyCloseOwned(player.server, player.getUUID());
+            if (player.getServer() != null) RealmManager.emergencyCloseOwned(player.getServer(), player.getUUID());
             CuriosToggleMirrorPacket.forget(player.getUUID());
             RealmSync.forget(player.getUUID());
         }
