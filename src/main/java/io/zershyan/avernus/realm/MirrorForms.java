@@ -36,11 +36,11 @@ public final class MirrorForms {
     /** 解析为注册对象；存在未注册 ID、超界或境印冲突时返回空。 */
     public static Optional<Resolved> resolve(MirrorForm form) {
         if (form.traits().size() > MirrorForm.MAX_TRAITS) return Optional.empty();
-        RealmAspect resolvedAspect = AvernusRegistries.REALM_ASPECT.get(form.aspect());
+        RealmAspect resolvedAspect = AvernusRegistries.REALM_ASPECT.get().getValue(form.aspect());
         if (resolvedAspect == null) return Optional.empty();
         Set<RealmTrait> resolvedTraits = new LinkedHashSet<>();
         for (ResourceLocation id : form.traits()) {
-            RealmTrait trait = AvernusRegistries.REALM_TRAIT.get(id);
+            RealmTrait trait = AvernusRegistries.REALM_TRAIT.get().getValue(id);
             if (trait == null) return Optional.empty();
             resolvedTraits.add(trait);
         }

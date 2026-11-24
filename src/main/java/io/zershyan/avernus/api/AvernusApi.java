@@ -8,7 +8,6 @@ import io.zershyan.avernus.realm.MirrorForms;
 import io.zershyan.avernus.realm.RealmCooldowns;
 import io.zershyan.avernus.realm.RealmManager;
 import io.zershyan.avernus.realm.RealmSets;
-import io.zershyan.avernus.registry.AvernusDataComponents;
 import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.data_component.MirrorTraits;
 import io.zershyan.avernus.registry.item.MirrorItem;
@@ -103,7 +102,7 @@ public final class AvernusApi {
         Item item = mirrorItem(form.aspect());
         if (item == null || MirrorForms.resolve(form).isEmpty()) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(item);
-        stack.set(AvernusDataComponents.MIRROR_TRAITS.get(), new MirrorTraits(form.traits()));
+        MirrorTraits.write(stack, new MirrorTraits(form.traits()));
         return stack;
     }
 

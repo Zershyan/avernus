@@ -147,7 +147,7 @@ public final class RealmTraitEffects {
     }
 
     private static boolean permitted(Mob mob, Realm realm, Player player) {
-        IllusionPermits permits = mob.getExistingDataOrNull(AvernusAttachments.ILLUSION_PERMITS);
+        IllusionPermits permits = AvernusAttachments.getExisting(mob, AvernusAttachments.ILLUSION_PERMITS);
         return permits != null && permits.allows(realm.id(), player.getUUID());
     }
 
@@ -163,11 +163,11 @@ public final class RealmTraitEffects {
         if (!(victim instanceof Mob mob) || !(source.getEntity() instanceof Player player)) return;
         Realm realm = sharedIllusion(mob, player);
         if (realm == null) return;
-        IllusionPermits old = mob.getExistingDataOrNull(AvernusAttachments.ILLUSION_PERMITS);
+        IllusionPermits old = AvernusAttachments.getExisting(mob, AvernusAttachments.ILLUSION_PERMITS);
         Set<UUID> players = new HashSet<>();
         if (old != null && old.realm().equals(realm.id())) players.addAll(old.players());
         players.add(player.getUUID());
-        mob.setData(AvernusAttachments.ILLUSION_PERMITS, new IllusionPermits(realm.id(), Set.copyOf(players)));
+        AvernusAttachments.set(mob, AvernusAttachments.ILLUSION_PERMITS, new IllusionPermits(realm.id(), Set.copyOf(players)));
     }
 
     /** 清除生物对受保护玩家的既有目标、中立愤怒与 Brain 攻击记忆。 */

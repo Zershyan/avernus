@@ -69,8 +69,8 @@ public final class RealmManager {
         Realm realm = create(level, owner, form, resolved.get());
         RealmSets.of(level).put(realm);
         MIRRORS.put(realm.id(), MirrorEntity.spawn(level, realm));
-        owner.removeData(AvernusAttachments.REALM_COOLDOWN);
-        owner.setData(AvernusAttachments.OWNS_OPEN_REALM, true);
+        AvernusAttachments.remove(owner, AvernusAttachments.REALM_COOLDOWN);
+        AvernusAttachments.set(owner, AvernusAttachments.OWNS_OPEN_REALM, true);
         realm.aspect().onRealmOpened(realm);
         realm.traits().forEach(trait -> trait.onRealmOpened(realm));
         RealmSync.tick(level, RealmSets.of(level));
@@ -125,7 +125,7 @@ public final class RealmManager {
     private static void startCooldown(ServerLevel level, Realm realm) {
         if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) {
             RealmCooldowns.start(owner);
-            owner.removeData(AvernusAttachments.OWNS_OPEN_REALM);
+            AvernusAttachments.remove(owner, AvernusAttachments.OWNS_OPEN_REALM);
         } else PendingCooldowns.add(realm.ownerId());
     }
 
@@ -134,7 +134,7 @@ public final class RealmManager {
         MirrorEntity mirror = MIRRORS.remove(realm.id());
         if (mirror != null) mirror.discard();
         if (level.getEntity(realm.ownerId()) instanceof LivingEntity owner) {
-            owner.removeData(AvernusAttachments.OWNS_OPEN_REALM);
+            AvernusAttachments.remove(owner, AvernusAttachments.OWNS_OPEN_REALM);
             if (!emergency) play(level, chestOf(owner), AvernusSounds.MIRROR_RETURN.get());
         }
         RealmNavigation.remove(level, realm);
@@ -256,11 +256,12 @@ public final class RealmManager {
         public static synchronized void apply(LivingEntity entity) {
             if (!(entity.level() instanceof ServerLevel level)) return;
             boolean pending = PENDING.remove(entity.getUUID());
-            boolean stale = entity.hasData(AvernusAttachments.OWNS_OPEN_REALM) && entity.getData(AvernusAttachments.OWNS_OPEN_REALM)
+            boolean stale = AvernusAttachments.has(entity, AvernusAttachments.OWNS_OPEN_REALM)
+                    && Boolean.TRUE.equals(AvernusAttachments.get(entity, AvernusAttachments.OWNS_OPEN_REALM))
                     && find(level.getServer(), entity.getUUID()) == null;
             if (!pending && !stale) return;
             if (RealmCooldowns.remaining(entity) == 0L) RealmCooldowns.start(entity);
-            entity.removeData(AvernusAttachments.OWNS_OPEN_REALM);
+            AvernusAttachments.remove(entity, AvernusAttachments.OWNS_OPEN_REALM);
         }
 
         static synchronized void clear() {

@@ -1,13 +1,10 @@
 package io.zershyan.avernus.realm;
 
-import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.api.event.RealmAttributeEvent;
 import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.attachment.RealmAttributes;
 import io.zershyan.avernus.registry.config.ServerConfig;
-import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -19,6 +16,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -27,7 +25,8 @@ import java.util.UUID;
 
 /** 境相属性的服务端计算与差量应用；仅修改本模组的临时修饰，不改基础属性。 */
 public final class RealmAttributeEffects {
-    private static final ResourceLocation MODIFIER_ID = Avernus.id("realm_aspect");
+    private static final UUID MODIFIER_ID = UUID.nameUUIDFromBytes("avernus:realm_aspect".getBytes(StandardCharsets.UTF_8));
+    private static final String MODIFIER_NAME = "avernus:realm_aspect";
 
     public static void tick(ServerLevel level) {
         RealmSet realms = RealmSets.of(level);
@@ -63,8 +62,8 @@ public final class RealmAttributeEffects {
     }
 
     private static RealmAttributeEvent.Configure defaults(ServerLevel level, Realm realm, LivingEntity owner) {
-        Map<Holder<Attribute>, Double> own = Map.of();
-        Map<Holder<Attribute>, Double> other = Map.of();
+        Map<Attribute, Double> own = Map.of();
+        Map<Attribute, Double> other = Map.of();
         if (realm.aspect() == AvernusRealmAspects.UMBRAL.get()) {
             own = Map.of(Attributes.MOVEMENT_SPEED, ServerConfig.UMBRAL_OWNER_SPEED_BONUS.get(),
                     Attributes.JUMP_STRENGTH, ServerConfig.UMBRAL_OWNER_JUMP_BONUS.get());
@@ -89,27 +88,31 @@ public final class RealmAttributeEffects {
                 || level.getServer().isPvpAllowed() && player.canHarmPlayer(other) && other.canHarmPlayer(player);
     }
 
-    private static void apply(LivingEntity entity, UUID realm, Map<Holder<Attribute>, Double> modifiers) {
-        RealmAttributes old = entity.getExistingDataOrNull(AvernusAttachments.REALM_ATTRIBUTES);
-        Set<Holder<Attribute>> installed = new HashSet<>();
+    private static void apply(LivingEntity entity, UUID realm, Map<Attribute, Double> modifiers) {
+        RealmAttributes old = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES);
+        Set<Attribute> installed = new HashSet<>();
         for (var entry : modifiers.entrySet()) {
             double amount = entry.getValue();
             if (amount == 0.0) continue;
             AttributeInstance attribute = entity.getAttribute(entry.getKey());
             if (attribute == null) continue;
-            var modifier = new AttributeModifier(MODIFIER_ID, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-            if (!modifier.equals(attribute.getModifier(MODIFIER_ID))) attribute.addOrUpdateTransientModifier(modifier);
+            AttributeModifier current = attribute.getModifier(MODIFIER_ID);
+            if (current == null || current.getAmount() != amount) {
+                attribute.removeModifier(MODIFIER_ID);
+                attribute.addTransientModifier(new AttributeModifier(MODIFIER_ID, MODIFIER_NAME, amount,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+            }
             installed.add(entry.getKey());
         }
         if (old != null) {
-            for (Holder<Attribute> attribute : old.attributes()) {
+            for (Attribute attribute : old.attributes()) {
                 if (!installed.contains(attribute)) remove(entity, attribute);
             }
         }
-        if (installed.isEmpty()) entity.removeData(AvernusAttachments.REALM_ATTRIBUTES);
+        if (installed.isEmpty()) AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
         else {
             var state = new RealmAttributes(realm, installed);
-            if (!state.equals(old)) entity.setData(AvernusAttachments.REALM_ATTRIBUTES, state);
+            if (!state.equals(old)) AvernusAttachments.set(entity, AvernusAttachments.REALM_ATTRIBUTES, state);
         }
     }
 
@@ -117,20 +120,20 @@ public final class RealmAttributeEffects {
     public static void release(ServerLevel level, Realm realm) {
         for (Entity entity : level.getAllEntities()) {
             if (!(entity instanceof LivingEntity living)) continue;
-            RealmAttributes state = living.getExistingDataOrNull(AvernusAttachments.REALM_ATTRIBUTES);
+            RealmAttributes state = AvernusAttachments.getExisting(living, AvernusAttachments.REALM_ATTRIBUTES);
             if (state != null && realm.id().equals(state.realm())) clear(living);
         }
     }
 
     /** 实体离境或卸载时撤销，保留其他模组、装备和药水的修饰。 */
     public static void clear(LivingEntity entity) {
-        RealmAttributes state = entity.getExistingDataOrNull(AvernusAttachments.REALM_ATTRIBUTES);
+        RealmAttributes state = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES);
         if (state == null) return;
         state.attributes().forEach(attribute -> remove(entity, attribute));
-        entity.removeData(AvernusAttachments.REALM_ATTRIBUTES);
+        AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
     }
 
-    private static void remove(LivingEntity entity, Holder<Attribute> key) {
+    private static void remove(LivingEntity entity, Attribute key) {
         AttributeInstance attribute = entity.getAttribute(key);
         if (attribute != null) attribute.removeModifier(MODIFIER_ID);
     }

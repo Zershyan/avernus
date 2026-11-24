@@ -19,13 +19,14 @@ public final class RealmCooldowns {
 
     public static long remaining(LivingEntity entity) {
         if (!(entity.level() instanceof ServerLevel level)) return 0L;
-        return entity.getData(AvernusAttachments.REALM_COOLDOWN).remaining(now(level));
+        RealmCooldown cooldown = AvernusAttachments.get(entity, AvernusAttachments.REALM_COOLDOWN);
+        return cooldown == null ? 0L : cooldown.remaining(now(level));
     }
 
     public static void start(LivingEntity entity) {
         if (!(entity.level() instanceof ServerLevel level)) return;
         int ticks = ServerConfig.CLOSE_COOLDOWN_TICKS.get();
-        entity.setData(AvernusAttachments.REALM_COOLDOWN, new RealmCooldown(now(level) + ticks));
+        AvernusAttachments.set(entity, AvernusAttachments.REALM_COOLDOWN, new RealmCooldown(now(level) + ticks));
         if (entity instanceof Player player) showCooldown(player, ticks);
     }
 

@@ -30,7 +30,7 @@ public class RealmTrait {
     }
 
     public final @Nullable ResourceLocation getId() {
-        return AvernusRegistries.REALM_TRAIT.getKey(this);
+        return AvernusRegistries.REALM_TRAIT.get().getKey(this);
     }
 
     public Component getName() {

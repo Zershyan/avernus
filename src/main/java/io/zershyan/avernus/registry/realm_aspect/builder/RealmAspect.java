@@ -26,7 +26,7 @@ public class RealmAspect {
     }
 
     public final @Nullable ResourceLocation getId() {
-        return AvernusRegistries.REALM_ASPECT.getKey(this);
+        return AvernusRegistries.REALM_ASPECT.get().getKey(this);
     }
 
     public Component getName() {

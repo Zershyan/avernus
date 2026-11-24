@@ -6,8 +6,11 @@ import io.zershyan.avernus.registry.realm_trait.builder.RealmTrait;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.registries.NewRegistryEvent;
 import net.minecraftforge.registries.RegistryBuilder;
+
+import java.util.function.Supplier;
 
 /** 自定义注册表声明：境相与境印，第三方可通过对应注册表键注册条目。 */
 public class AvernusRegistries {
@@ -16,12 +19,12 @@ public class AvernusRegistries {
     public static final ResourceKey<Registry<RealmTrait>> REALM_TRAIT_KEY =
             ResourceKey.createRegistryKey(Avernus.id("realm_trait"));
 
-    public static final Registry<RealmAspect> REALM_ASPECT = new RegistryBuilder<>(REALM_ASPECT_KEY).sync(true).create();
-    public static final Registry<RealmTrait> REALM_TRAIT = new RegistryBuilder<>(REALM_TRAIT_KEY).sync(true).create();
+    public static Supplier<IForgeRegistry<RealmAspect>> REALM_ASPECT;
+    public static Supplier<IForgeRegistry<RealmTrait>> REALM_TRAIT;
 
     private static void createRegistries(NewRegistryEvent event) {
-        event.register(REALM_ASPECT);
-        event.register(REALM_TRAIT);
+        REALM_ASPECT = event.create(new RegistryBuilder<RealmAspect>().setName(Avernus.id("realm_aspect")));
+        REALM_TRAIT = event.create(new RegistryBuilder<RealmTrait>().setName(Avernus.id("realm_trait")));
     }
 
     public static void doRegister(IEventBus modBus) {

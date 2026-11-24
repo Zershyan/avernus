@@ -30,7 +30,7 @@ public final class RealmPresenceTracker {
     public static void tick(Entity entity) {
         if (!(entity.level() instanceof ServerLevel level) || entity.noPhysics || entity.isRemoved()) return;
         RealmPresence old = presence(entity);
-        boolean pending = Boolean.TRUE.equals(entity.getExistingDataOrNull(AvernusAttachments.PENDING_RECOVERY));
+        boolean pending = Boolean.TRUE.equals(AvernusAttachments.getExisting(entity, AvernusAttachments.PENDING_RECOVERY));
         RealmSet realms = RealmSets.of(level);
         if (realms.isEmpty() && old == RealmPresence.NONE && !pending) return;
 
@@ -49,8 +49,8 @@ public final class RealmPresenceTracker {
         }
         store(entity, old, new RealmPresence(realm, guard, geometry.signature()));
         if (affected != pending) {
-            if (affected) entity.setData(AvernusAttachments.PENDING_RECOVERY, true);
-            else entity.removeData(AvernusAttachments.PENDING_RECOVERY);
+            if (affected) AvernusAttachments.set(entity, AvernusAttachments.PENDING_RECOVERY, true);
+            else AvernusAttachments.remove(entity, AvernusAttachments.PENDING_RECOVERY);
         }
     }
 
@@ -85,14 +85,14 @@ public final class RealmPresenceTracker {
     }
 
     private static RealmPresence presence(Entity entity) {
-        RealmPresence value = entity.getExistingDataOrNull(AvernusAttachments.REALM_PRESENCE);
+        RealmPresence value = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_PRESENCE);
         return value != null ? value : RealmPresence.NONE;
     }
 
     private static void store(Entity entity, RealmPresence old, RealmPresence next) {
         if (next.equals(old)) return;
-        if (next.equals(RealmPresence.NONE)) entity.removeData(AvernusAttachments.REALM_PRESENCE);
-        else entity.setData(AvernusAttachments.REALM_PRESENCE, next);
+        if (next.equals(RealmPresence.NONE)) AvernusAttachments.remove(entity, AvernusAttachments.REALM_PRESENCE);
+        else AvernusAttachments.set(entity, AvernusAttachments.REALM_PRESENCE, next);
     }
 
     private record Footprint(@Nullable Realm realm, long signature) {

@@ -10,18 +10,18 @@ import net.minecraftforge.registries.DeferredRegister;
 /** 内置境印条目；保留既有注册 ID 与第三方扩展入口。 */
 public class AvernusRealmTraits {
     public static final DeferredRegister<RealmTrait> REGISTER =
-            DeferredRegister.create(AvernusRegistries.REALM_TRAIT, Avernus.MODID);
+            DeferredRegister.create(AvernusRegistries.REALM_TRAIT_KEY, Avernus.MODID);
 
-    public static final RegistryObject<RealmTrait, RealmTrait> ISOLATION = REGISTER.register("isolation", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> ANNIHILATION = REGISTER.register("annihilation", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> ILLUSION = REGISTER.register("illusion", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> REBIRTH = REGISTER.register("rebirth", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> WEAK_WATER;
-    public static final RegistryObject<RealmTrait, RealmTrait> BOUNDLESS;
-    public static final RegistryObject<RealmTrait, RealmTrait> UNREALITY = REGISTER.register("unreality", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> ETERNITY = REGISTER.register("eternity", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> EQUALITY = REGISTER.register("equality", RealmTrait::new);
-    public static final RegistryObject<RealmTrait, RealmTrait> FREEDOM = REGISTER.register("freedom", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> ISOLATION = REGISTER.register("isolation", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> ANNIHILATION = REGISTER.register("annihilation", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> ILLUSION = REGISTER.register("illusion", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> REBIRTH = REGISTER.register("rebirth", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> WEAK_WATER;
+    public static final RegistryObject<RealmTrait> BOUNDLESS;
+    public static final RegistryObject<RealmTrait> UNREALITY = REGISTER.register("unreality", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> ETERNITY = REGISTER.register("eternity", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> EQUALITY = REGISTER.register("equality", RealmTrait::new);
+    public static final RegistryObject<RealmTrait> FREEDOM = REGISTER.register("freedom", RealmTrait::new);
 
     static {
         WEAK_WATER = REGISTER.register("weak_water", () -> new ExclusiveRealmTrait(AvernusRealmTraits.BOUNDLESS));

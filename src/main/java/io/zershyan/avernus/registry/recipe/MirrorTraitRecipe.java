@@ -1,26 +1,23 @@
 package io.zershyan.avernus.registry.recipe;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.google.gson.JsonObject;
 import io.zershyan.avernus.api.realm.MirrorForm;
 import io.zershyan.avernus.api.recipe.MirrorTraitRecipeView;
 import io.zershyan.avernus.realm.MirrorForms;
-import io.zershyan.avernus.registry.AvernusDataComponents;
 import io.zershyan.avernus.registry.AvernusItems;
 import io.zershyan.avernus.registry.AvernusRecipes;
 import io.zershyan.avernus.registry.data_component.MirrorTraits;
 import io.zershyan.avernus.registry.item.MirrorItem;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.SmithingRecipeInput;
+import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,12 +25,14 @@ import java.util.Objects;
 import java.util.Optional;
 
 /** 锻造台增删境印：添加时模板槽留空，删除时模板槽放羽毛；附加槽为该境印的印记。 */
-public class MirrorTraitRecipe implements MirrorTraitRecipeView {
+public class MirrorTraitRecipe implements MirrorTraitRecipeView, SmithingRecipe {
+    private final ResourceLocation id;
     private final ResourceLocation trait;
     private final Ingredient material;
     private final boolean remove;
 
-    public MirrorTraitRecipe(ResourceLocation trait, Ingredient material, boolean remove) {
+    public MirrorTraitRecipe(ResourceLocation id, ResourceLocation trait, Ingredient material, boolean remove) {
+        this.id = id;
         this.trait = trait;
         this.material = material;
         this.remove = remove;
@@ -63,21 +62,22 @@ public class MirrorTraitRecipe implements MirrorTraitRecipeView {
     }
 
     @Override
-    public boolean matches(SmithingRecipeInput input, @NotNull Level level) {
-        return isTemplateIngredient(input.template()) && material.test(input.addition()) && next(input.base()).isPresent();
+    public boolean matches(@NotNull Container container, @NotNull Level level) {
+        return isTemplateIngredient(container.getItem(0)) && isBaseIngredient(container.getItem(1))
+                && isAdditionIngredient(container.getItem(2)) && next(container.getItem(1)).isPresent();
     }
 
     @Override
-    public @NotNull ItemStack assemble(SmithingRecipeInput input, HolderLookup.@NotNull Provider registries) {
-        return next(input.base()).map(traits -> {
-            ItemStack result = input.base().copyWithCount(1);
-            result.set(AvernusDataComponents.MIRROR_TRAITS.get(), traits);
+    public @NotNull ItemStack assemble(@NotNull Container container, @NotNull RegistryAccess access) {
+        return next(container.getItem(1)).map(traits -> {
+            ItemStack result = container.getItem(1).copyWithCount(1);
+            MirrorTraits.write(result, traits);
             return result;
         }).orElse(ItemStack.EMPTY);
     }
 
     @Override
-    public @NotNull ItemStack getResultItem(HolderLookup.@NotNull Provider registries) {
+    public @NotNull ItemStack getResultItem(@NotNull RegistryAccess access) {
         return new ItemStack(AvernusItems.UMBRAL_MIRROR.get());
     }
 
@@ -103,19 +103,32 @@ public class MirrorTraitRecipe implements MirrorTraitRecipeView {
     }
 
     @Override
+    public @NotNull ResourceLocation getId() {
+        return id;
+    }
+
+    @Override
     public @NotNull RecipeSerializer<?> getSerializer() {
         return AvernusRecipes.MIRROR_TRAIT.get();
     }
 
-    public static final MapCodec<MirrorTraitRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.fieldOf("trait").forGetter(MirrorTraitRecipe::trait),
-            Ingredient.CODEC_NONEMPTY.fieldOf("material").forGetter(MirrorTraitRecipe::material),
-            Codec.BOOL.optionalFieldOf("remove", false).forGetter(MirrorTraitRecipe::remove)
-    ).apply(instance, MirrorTraitRecipe::new));
+    public static class Serializer implements RecipeSerializer<MirrorTraitRecipe> {
+        @Override
+        public MirrorTraitRecipe fromJson(ResourceLocation id, JsonObject json) {
+            return new MirrorTraitRecipe(id, new ResourceLocation(GsonHelper.getAsString(json, "trait")),
+                    Ingredient.fromJson(GsonHelper.getAsJsonObject(json, "material")), GsonHelper.getAsBoolean(json, "remove", false));
+        }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, MirrorTraitRecipe> STREAM_CODEC = StreamCodec.composite(
-            ResourceLocation.STREAM_CODEC, MirrorTraitRecipe::trait,
-            Ingredient.CONTENTS_STREAM_CODEC, MirrorTraitRecipe::material,
-            ByteBufCodecs.BOOL, MirrorTraitRecipe::remove,
-            MirrorTraitRecipe::new);
+        @Override
+        public MirrorTraitRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf) {
+            return new MirrorTraitRecipe(id, buf.readResourceLocation(), Ingredient.fromNetwork(buf), buf.readBoolean());
+        }
+
+        @Override
+        public void toNetwork(FriendlyByteBuf buf, MirrorTraitRecipe recipe) {
+            buf.writeResourceLocation(recipe.trait);
+            recipe.material.toNetwork(buf);
+            buf.writeBoolean(recipe.remove);
+        }
+    }
 }

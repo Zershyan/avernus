@@ -2,7 +2,6 @@ package io.zershyan.avernus.registry.item;
 
 import io.zershyan.avernus.api.realm.MirrorForm;
 import io.zershyan.avernus.realm.RealmManager;
-import io.zershyan.avernus.registry.AvernusDataComponents;
 import io.zershyan.avernus.registry.data_component.MirrorTraits;
 import io.zershyan.avernus.registry.realm_aspect.builder.RealmAspect;
 import net.minecraft.world.InteractionHand;
@@ -24,8 +23,7 @@ public class MirrorItem extends Item {
         super(new Properties()
                 .stacksTo(1)
                 .rarity(Rarity.EPIC)
-                .fireResistant()
-                .component(AvernusDataComponents.MIRROR_TRAITS.get(), MirrorTraits.EMPTY));
+                .fireResistant());
         this.aspect = aspect;
     }
 
@@ -34,7 +32,7 @@ public class MirrorItem extends Item {
     }
 
     public static MirrorTraits getTraits(ItemStack stack) {
-        return stack.getOrDefault(AvernusDataComponents.MIRROR_TRAITS.get(), MirrorTraits.EMPTY);
+        return MirrorTraits.read(stack);
     }
 
     public MirrorForm form(ItemStack stack) {
