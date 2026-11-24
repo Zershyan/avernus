@@ -152,6 +152,8 @@ dependencies {
     // MixinExtras：Forge 1.20.1 不内置，开发期放进运行时类路径
     compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
     implementation "io.github.llamalad7:mixinextras-forge:0.4.1"
+    // 成品通过 JarJar 内嵌，避免要求玩家额外安装
+    jarJar "io.github.llamalad7:mixinextras-forge:0.4.1"
 }
 
 // mods.toml 占位符展开（Forge 元数据直接位于 resources 下）
@@ -186,6 +188,8 @@ tasks.named('processResources', ProcessResources).configure {
 
 tasks.named('jar', Jar).configure {
     manifest.attributes('MixinConfigs': "${mod_id}.mixins.json")
+    // 注解处理器产物与 processResources 复制结果可能重叠，保留一份即可
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // 对外发布用正式版本号，不带 +build.<编号>；置 maven_publish_release_version=false 才沿用带编号版本

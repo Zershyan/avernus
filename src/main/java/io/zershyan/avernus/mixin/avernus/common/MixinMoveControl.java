@@ -7,6 +7,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import org.spongepowered.asm.mixin.Final;
@@ -26,5 +28,12 @@ public abstract class MixinMoveControl {
     private BlockPathTypes avernus$strafe(NodeEvaluator evaluator, BlockGetter level, int x, int y, int z, Operation<BlockPathTypes> original) {
         BlockPathTypes type = RealmPhysics.pathType(evaluator, mob, new BlockPos(x, y, z));
         return type != null ? type : original.call(evaluator, level, x, y, z);
+    }
+
+    /** MOVE_TO 用脚下真实方块判断是否起跳，领域内改读有效地形以免被台阶顶起。 */
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
+    private BlockState avernus$selfBlock(Level level, BlockPos pos, Operation<BlockState> original) {
+        return RealmPhysics.collision(level, mob, pos, original.call(level, pos));
     }
 }

@@ -55,7 +55,7 @@ public abstract class MixinEntity {
         }
     }
 
-    @WrapOperation(method = {"checkInsideBlocks", "lambda$isInWall$8", "getBlockSpeedFactor", "getBlockJumpFactor",
+    @WrapOperation(method = {"checkInsideBlocks", "lambda$isInWall$11", "getBlockSpeedFactor", "getBlockJumpFactor",
             "getOnPos(F)Lnet/minecraft/core/BlockPos;", "getBlockStateOn", "getBlockStateOnLegacy", "getInBlockState", "isInWall",
             "move", "lambda$checkFallDamage$3"},
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))

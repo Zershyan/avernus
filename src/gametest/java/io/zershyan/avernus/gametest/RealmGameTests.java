@@ -23,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -146,10 +147,14 @@ public final class RealmGameTests {
                 .thenWaitUntil(() -> assertCovered(helper, realm, 0, 0, SIZE_X - 1, SIZE_Z - 1))
                 .thenExecute(() -> {
                     highest[0] = pig.getY();
+                    BlockPos step = helper.absolutePos(new BlockPos(6, H, 7));
+                    AABB probe = new AABB(step.getX() + 0.1, step.getY() + 0.1, step.getZ() + 0.1,
+                            step.getX() + 0.9, step.getY() + 0.9, step.getZ() + 0.9);
+                    helper.assertTrue(!helper.getLevel().getBlockCollisions(pig, probe).iterator().hasNext(), "有效地形中台阶列不应有碰撞");
                     helper.assertTrue(pig.getNavigation().moveTo(goal.getX() + 0.5, goal.getY(), goal.getZ() + 0.5, 1.0), "应能规划出平地路径");
                 })
                 .thenWaitUntil(() -> helper.assertTrue(pig.getNavigation().isDone() && pig.getZ() > goal.getZ() - 1.5, "猪应走到目标"))
-                .thenExecute(() -> helper.assertTrue(highest[0] <= ground + 0.1, "穿过被抹平的台阶时不得起跳，最高 y=" + highest[0]))
+                .thenExecute(() -> helper.assertTrue(highest[0] <= ground + 0.1, "穿过被抹平的台阶时不得起跳，最高 y=" + highest[0] + "，地面 y=" + ground))
                 .thenExecute(() -> close(helper, realm))
                 .thenSucceed();
     }
