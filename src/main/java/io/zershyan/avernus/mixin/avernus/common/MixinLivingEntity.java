@@ -33,7 +33,7 @@ public abstract class MixinLivingEntity {
     }
 
     /** 1.20.1 没有通用跳跃强度属性，境相的跳跃比例在起跳速度上做独立乘区。 */
-    @ModifyReturnValue(method = "getJumpPower(F)F", at = @At("RETURN"))
+    @ModifyReturnValue(method = "getJumpPower()F", at = @At("RETURN"))
     private float avernus$realmJump(float original) {
         return (float) (original * (1.0 + RealmAttributeEffects.jumpBonus((LivingEntity) (Object) this)));
     }

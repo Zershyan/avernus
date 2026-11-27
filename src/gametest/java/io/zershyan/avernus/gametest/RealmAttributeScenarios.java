@@ -31,6 +31,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
 
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,7 @@ public final class RealmAttributeScenarios {
             scene.update();
             assertAmount(helper, scene.owner(), Attributes.MOVEMENT_SPEED, 0.2);
             helper.assertTrue(Math.abs(RealmAttributeEffects.jumpBonus(scene.owner()) - 0.2) < 1.0E-9, "1.20.1 的跳跃比例必须记在起跳倍率上");
+            float boostedJump = jumpPower(scene.owner());
             assertAmount(helper, scene.target(), Attributes.MOVEMENT_SPEED, -0.2);
             assertValue(helper, scene.owner(), Attributes.MOVEMENT_SPEED, 0.24);
             assertValue(helper, scene.target(), Attributes.MOVEMENT_SPEED, 0.16);
@@ -63,6 +65,8 @@ public final class RealmAttributeScenarios {
             helper.assertFalse(scene.owner().getAttributes().save().toString().contains(MODIFIER.toString()), "境相修饰不得写入存档");
             scene.close();
             assertValue(helper, scene.owner(), Attributes.MOVEMENT_SPEED, 0.2);
+            helper.assertTrue(RealmAttributeEffects.jumpBonus(scene.owner()) == 0.0, "关境必须清除同步的跳跃倍率");
+            helper.assertTrue(Math.abs(boostedJump - jumpPower(scene.owner()) * 1.2F) < 1.0E-5, "实际起跳速度必须获得 20% 加成");
             assertClear(helper, scene.target());
             helper.assertTrue(AvernusApi.realmAt(scene.target()) == null && AvernusApi.aspectAt(scene.target()) == null, "移除境后查询应返回 null");
         });
@@ -423,6 +427,14 @@ public final class RealmAttributeScenarios {
         table.clear();
         helper.assertTrue(table.values().isEmpty() && !table.originalValues().isEmpty(), "清空结果不得影响原始表");
         helper.succeed();
+    }
+
+    private static float jumpPower(LivingEntity entity) {
+        try {
+            return (float) ObfuscationReflectionHelper.findMethod(LivingEntity.class, "m_6118_").invoke(entity);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("无法读取实际起跳速度", e);
+        }
     }
 
     private record Scene(GameTestHelper helper, LivingEntity owner, Zombie target, Zombie other, Realm realm) {

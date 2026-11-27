@@ -1,4 +1,12 @@
 {
+  "attributes": [
+    "Position"
+  ],
+  "blend": {
+    "dstrgb": "one",
+    "func": "add",
+    "srcrgb": "one"
+  },
   "fragment": "avernus:realm_post_bloom_up",
   "samplers": [
     {

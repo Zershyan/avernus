@@ -41,12 +41,16 @@ public final class RealmShaderProvider implements DataProvider {
         post(writes, output, AvernusShaders.Effect.POST_COMPOSITE, List.of("SceneSampler", "BloomSampler"),
                 "Quality", "Strength", "Atmosphere", "Time", "Flash");
         String mirror = AvernusShaders.Effect.MIRROR.path;
-        writes.add(DataProvider.saveStable(output, mirror(mirror), paths.json(Avernus.id("core/" + mirror))));
+        String ghost = AvernusShaders.Effect.MIRROR_GHOST.path;
+        writes.add(DataProvider.saveStable(output, mirror(mirror, false), paths.json(Avernus.id("core/" + mirror))));
+        writes.add(DataProvider.saveStable(output, mirror(mirror, true), paths.json(Avernus.id("core/" + ghost))));
         return CompletableFuture.allOf(writes.toArray(CompletableFuture[]::new));
     }
 
     private static JsonObject terrain(String fragment) {
-        var program = program("rendertype_realm", fragment, "Sampler0", "Sampler2", "RealmColumns");
+        var program = program("rendertype_realm", fragment, List.of("Position", "Color", "UV0", "UV2", "Normal"),
+                "Sampler0", "Sampler2", "RealmColumns");
+        blend(program, "srcalpha", "1-srcalpha");
         var uniforms = program.getAsJsonArray("uniforms");
         matrix(uniforms, "ModelViewMat");
         matrix(uniforms, "ProjMat");
@@ -67,8 +71,9 @@ public final class RealmShaderProvider implements DataProvider {
         return program;
     }
 
-    private static JsonObject mirror(String name) {
-        var program = program(name, name, "Sampler0");
+    private static JsonObject mirror(String name, boolean ghost) {
+        var program = program(name, name, List.of("Position", "Color", "UV0", "UV1", "UV2", "Normal"), "Sampler0");
+        blend(program, "srcalpha", ghost ? "one" : "1-srcalpha");
         var uniforms = program.getAsJsonArray("uniforms");
         matrix(uniforms, "ModelViewMat");
         matrix(uniforms, "ProjMat");
@@ -89,7 +94,8 @@ public final class RealmShaderProvider implements DataProvider {
 
     /** 特效 Shader 只声明实际用到的 uniform，类型与默认值统一在此登记。 */
     private static JsonObject post(String fragment, List<String> samplers, String... uniformNames) {
-        var program = program("realm_post", fragment, samplers.toArray(String[]::new));
+        var program = program("realm_post", fragment, List.of("Position"), samplers.toArray(String[]::new));
+        if (fragment.equals(AvernusShaders.Effect.POST_BLOOM_UP.path)) blend(program, "one", "one");
         var uniforms = program.getAsJsonArray("uniforms");
         for (String name : uniformNames) {
             Spec spec = POST_UNIFORMS.get(name);
@@ -130,10 +136,13 @@ public final class RealmShaderProvider implements DataProvider {
             Map.entry("Shock", new Spec("float", 0, 0, 0, -1)),
             Map.entry("Flash", new Spec("float", 0, 0, 0, 0)));
 
-    private static JsonObject program(String vertex, String fragment, String... samplers) {
+    private static JsonObject program(String vertex, String fragment, List<String> attributes, String... samplers) {
         JsonObject json = new JsonObject();
         json.addProperty("vertex", Avernus.id(vertex).toString());
         json.addProperty("fragment", Avernus.id(fragment).toString());
+        JsonArray attributeNames = new JsonArray();
+        attributes.forEach(attributeNames::add);
+        json.add("attributes", attributeNames);
         JsonArray inputs = new JsonArray();
         for (String name : samplers) {
             JsonObject sampler = new JsonObject();
@@ -143,6 +152,14 @@ public final class RealmShaderProvider implements DataProvider {
         json.add("samplers", inputs);
         json.add("uniforms", new JsonArray());
         return json;
+    }
+
+    private static void blend(JsonObject program, String source, String target) {
+        JsonObject blend = new JsonObject();
+        blend.addProperty("func", "add");
+        blend.addProperty("srcrgb", source);
+        blend.addProperty("dstrgb", target);
+        program.add("blend", blend);
     }
 
     private static void matrix(JsonArray uniforms, String name) {

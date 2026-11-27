@@ -34,7 +34,6 @@ public final class RealmRenderHandler {
     @SubscribeEvent
     public static void onRenderStage(RenderLevelStageEvent event) {
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) RealmRenderState.renderWeakWaterAbyss(event);
-        else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) RealmEnvironment.render(event);
     }
 
     @SubscribeEvent

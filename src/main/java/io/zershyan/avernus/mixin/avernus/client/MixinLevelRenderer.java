@@ -4,9 +4,7 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexBuffer;
 import io.zershyan.avernus.client.realm_render.RealmEnvironment;
 import io.zershyan.avernus.client.realm_render.RealmLighting;
 import io.zershyan.avernus.client.realm_render.RealmRenderState;
@@ -14,18 +12,23 @@ import io.zershyan.avernus.realm.RealmSets;
 import io.zershyan.avernus.registry.AvernusShaders;
 import io.zershyan.avernus.util.mixin.avernus.client.IMixinRenderChunkInfo;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectIterators;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.ViewArea;
 import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
@@ -75,16 +78,34 @@ public abstract class MixinLevelRenderer {
         RealmRenderState.dirty(level, x, y, z);
     }
 
-    /** 每帧第一层绘制前准备可见分区与网格。 */
-    @Inject(method = "renderChunkLayer", at = @At("HEAD"))
-    private void avernus$prepare(RenderType type, PoseStack poseStack, double camX, double camY, double camZ, Matrix4f projection,
-                                 CallbackInfo ci) {
-        if (type != RenderType.solid() || level == null || viewArea == null) return;
+    /** Forge 1.20.1 的 AFTER_LEVEL 事件传入投影矩阵栈，此处使用实际的世界视图矩阵。 */
+    @Inject(method = "renderLevel", at = @At("TAIL"))
+    private void avernus$renderRealmEffects(PoseStack view, float partialTick, long finishTimeNano, boolean renderBlockOutline,
+                                           Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f projection,
+                                           CallbackInfo ci) {
+        RealmEnvironment.render(camera, view.last().pose(), projection, partialTick, ((LevelRenderer) (Object) this).getTicks());
+    }
+
+    @Inject(method = "compileChunks", at = @At("HEAD"))
+    private void avernus$prepare(Camera camera, CallbackInfo ci) {
+        if (level == null || viewArea == null) return;
         Frustum frustum = ((LevelRenderer) (Object) this).getFrustum();
-        List<ChunkRenderDispatcher.RenderChunk> vanilla = new ArrayList<>(renderChunksInFrustum.size());
-        for (Object info : renderChunksInFrustum) vanilla.add(((IMixinRenderChunkInfo) info).avernus$chunk());
-        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        if (frustum == null) return;
+        List<ChunkRenderDispatcher.RenderChunk> vanilla = new ArrayList<>();
+        if (!RealmSets.of(level).isEmpty()) {
+            for (Object info : renderChunksInFrustum) vanilla.add(((IMixinRenderChunkInfo) info).avernus$chunk());
+        }
         RealmRenderState.prepare(level, viewArea, camera, frustum, vanilla);
+    }
+
+    @Inject(method = "compileChunks", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/chunk/ChunkRenderDispatcher;uploadAllPendingUploads()V"))
+    private void avernus$compileSupplement(Camera camera, CallbackInfo ci,
+                                           @Local List<ChunkRenderDispatcher.RenderChunk> pending,
+                                           @Local LevelLightEngine lightEngine) {
+        for (var section : RealmRenderState.supplement()) {
+            if (section.isDirty() && lightEngine.lightOnInSection(SectionPos.of(section.getOrigin()))) pending.add(section);
+        }
     }
 
     @ModifyExpressionValue(method = "renderChunkLayer", at = @At(value = "INVOKE",
@@ -96,36 +117,21 @@ public abstract class MixinLevelRenderer {
         return shader;
     }
 
-    @WrapOperation(method = "renderChunkLayer", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/VertexBuffer;draw()V"))
-    private void avernus$drawAdditional(VertexBuffer vertices, Operation<Void> original, @Local(argsOnly = true) RenderType layer,
-                                        @Local ChunkRenderDispatcher.RenderChunk section, @Local ShaderInstance shader) {
-        if (RealmRenderState.active() && shader == AvernusShaders.realmChunk(layer)) {
-            RealmRenderState.draw(section, layer, shader, () -> original.call(vertices));
-        } else {
-            original.call(vertices);
-        }
+    @WrapOperation(method = "renderChunkLayer", at = @At(value = "INVOKE",
+            target = "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;listIterator(I)Lit/unimi/dsi/fastutil/objects/ObjectListIterator;", remap = false))
+    private ObjectListIterator<?> avernus$sectionIterator(ObjectArrayList<?> sections, int start,
+                                                         Operation<ObjectListIterator<?>> original,
+                                                         @Local(argsOnly = true) RenderType layer) {
+        if (RealmRenderState.active() && AvernusShaders.realmChunk(layer) != null) return ObjectIterators.EMPTY_ITERATOR;
+        return original.call(sections, start);
     }
 
-    /** 原版没有几何、因而不在可见列表里的补充分区，在着色器清理前单独绘制。 */
+    /** 沿用原版的着色器初始化，统一绘制原版分区与补充分区。 */
     @Inject(method = "renderChunkLayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ShaderInstance;clear()V"))
-    private void avernus$drawSupplement(RenderType type, PoseStack poseStack, double camX, double camY, double camZ, Matrix4f projection,
-                                        CallbackInfo ci) {
-        if (!RealmRenderState.active()) return;
-        ShaderInstance shader = RenderSystem.getShader();
-        if (shader != AvernusShaders.realmChunk(type)) return;
-        var offset = shader.CHUNK_OFFSET;
-        for (ChunkRenderDispatcher.RenderChunk section : RealmRenderState.supplement()) {
-            BlockPos origin = section.getOrigin();
-            if (offset != null) {
-                offset.set((float) ((double) origin.getX() - camX), (float) ((double) origin.getY() - camY), (float) ((double) origin.getZ() - camZ));
-                offset.upload();
-            }
-            RealmRenderState.draw(section, type, shader, () -> {
-            });
-        }
-        if (offset != null) {
-            offset.set(0.0F, 0.0F, 0.0F);
-            offset.upload();
+    private void avernus$drawRealmLayer(RenderType type, PoseStack poseStack, double camX, double camY, double camZ,
+                                       Matrix4f projection, CallbackInfo ci, @Local ShaderInstance shader) {
+        if (RealmRenderState.active() && shader == AvernusShaders.realmChunk(type)) {
+            RealmRenderState.drawLayer(type, shader, camX, camY, camZ);
         }
     }
 }

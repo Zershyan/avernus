@@ -112,13 +112,20 @@ legacyForge {
             systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
+        clientRegression {
+            client()
+            gameDirectory = project.file('./build/client-regression')
+            systemProperty 'avernus.clientRegression', 'true'
+            programArguments.addAll('--username', 'regression', '--width', '854', '--height', '480')
+        }
+
         data {
             data()
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
         configureEach { run ->
-            def mod = run.name == 'gameTestServer' ? "${mod_id}_gametest" : mod_id
+            def mod = run.name in ['gameTestServer', 'clientRegression'] ? "${mod_id}_gametest" : mod_id
             run.loadedMods.set([legacyForge.mods.getByName(mod)])
             run.systemProperty 'forge.logging.markers', 'REGISTRIES'
             run.logLevel = org.slf4j.event.Level.DEBUG
@@ -130,27 +137,31 @@ legacyForge.addModdingDependenciesTo(sourceSets.gametest)
 
 configurations {
     runtimeClasspath.extendsFrom localRuntime
+    gametestImplementation.extendsFrom implementation
     gametestCompileOnly.extendsFrom compileOnly
+    gametestRuntimeOnly.extendsFrom runtimeOnly
     gametestRuntimeClasspath.extendsFrom localRuntime
 }
 
 dependencies {
-    // 玩家持久化附件：Forge 1.20.1 无 AttachmentType，使用固定正式版的 forgeattachment
+    // Maven 上的 ForgeAttachment 是开发包；实际安装须使用 CurseForge 的同版本正式 jar（文件 9481181）。
     modImplementation "io.zershyan:forgeattachment:${forgeattachment_version}"
-    // Curios 为可选依赖：只编译其 API，不嵌入成品
-    compileOnly "top.theillusivec4.curios:curios-forge:${curios_version}:api"
+    // Curios、JEI 皆为可选依赖，开发运行需要将 SRG 名映射为开发名。
+    modCompileOnly "top.theillusivec4.curios:curios-forge:${curios_version}:api"
     if (curios_dev_runtime.toBoolean()) {
-        localRuntime "top.theillusivec4.curios:curios-forge:${curios_version}"
+        modRuntimeOnly "top.theillusivec4.curios:curios-forge:${curios_version}"
     }
-    // JEI 为可选依赖：只编译其 API，用于在锻造页显示类型配方
-    compileOnly "mezz.jei:jei-1.20.1-forge-api:${jei_version}"
+    modCompileOnly "mezz.jei:jei-1.20.1-common-api:${jei_version}"
+    modCompileOnly "mezz.jei:jei-1.20.1-forge-api:${jei_version}"
     if (jei_dev_runtime.toBoolean()) {
-        localRuntime "mezz.jei:jei-1.20.1-forge:${jei_version}"
+        modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${jei_version}") { transitive = false }
+        modRuntimeOnly "net.mezzdev.config:mezz_config-1.20.1-forge:${jei_config_version}"
     }
     // Forge 1.20.1 的 Mixin refmap 由注解处理器生成
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     // MixinExtras：Forge 1.20.1 不内置，开发期放进运行时类路径
     compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
+    annotationProcessor "io.github.llamalad7:mixinextras-common:0.4.1"
     implementation "io.github.llamalad7:mixinextras-forge:0.4.1"
     // 成品通过 JarJar 内嵌，避免要求玩家额外安装
     jarJar "io.github.llamalad7:mixinextras-forge:0.4.1"

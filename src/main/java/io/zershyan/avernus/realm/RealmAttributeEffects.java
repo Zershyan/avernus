@@ -112,17 +112,21 @@ public final class RealmAttributeEffects {
         // 1.20.1 的玩家没有跳跃强度属性，改用起跳速度倍率承载同一比例
         Double jump = modifiers.get(Attributes.JUMP_STRENGTH);
         double jumpBonus = jump != null && entity.getAttribute(Attributes.JUMP_STRENGTH) == null ? jump : 0.0;
+        if (jumpBonus != jumpBonus(entity)) {
+            if (jumpBonus == 0.0) AvernusAttachments.remove(entity, AvernusAttachments.REALM_JUMP_BONUS);
+            else AvernusAttachments.set(entity, AvernusAttachments.REALM_JUMP_BONUS, jumpBonus);
+        }
         if (installed.isEmpty() && jumpBonus == 0.0) AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
         else {
-            var state = new RealmAttributes(realm, installed, jumpBonus);
+            var state = new RealmAttributes(realm, installed);
             if (!state.equals(old)) AvernusAttachments.set(entity, AvernusAttachments.REALM_ATTRIBUTES, state);
         }
     }
 
-    /** 境相给出的起跳速度比例，供跳跃 Mixin 读取。 */
+    /** 两端读取同一份同步的起跳倍率。 */
     public static double jumpBonus(LivingEntity entity) {
-        RealmAttributes state = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES);
-        return state == null ? 0.0 : state.jumpBonus();
+        Double bonus = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_JUMP_BONUS);
+        return bonus == null ? 0.0 : bonus;
     }
 
     /** 境彻底移除时立即撤销，避免最后一个境移除后没有后续 tick 能清理。 */
@@ -137,9 +141,11 @@ public final class RealmAttributeEffects {
     /** 实体离境或卸载时撤销，保留其他模组、装备和药水的修饰。 */
     public static void clear(LivingEntity entity) {
         RealmAttributes state = AvernusAttachments.getExisting(entity, AvernusAttachments.REALM_ATTRIBUTES);
-        if (state == null) return;
-        state.attributes().forEach(attribute -> remove(entity, attribute));
-        AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
+        if (state != null) {
+            state.attributes().forEach(attribute -> remove(entity, attribute));
+            AvernusAttachments.remove(entity, AvernusAttachments.REALM_ATTRIBUTES);
+        }
+        if (jumpBonus(entity) != 0.0) AvernusAttachments.remove(entity, AvernusAttachments.REALM_JUMP_BONUS);
     }
 
     private static void remove(LivingEntity entity, Attribute key) {

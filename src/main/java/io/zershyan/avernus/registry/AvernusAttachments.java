@@ -6,14 +6,19 @@ import io.zershyan.avernus.registry.attachment.RealmAttributes;
 import io.zershyan.avernus.registry.attachment.RealmCooldown;
 import io.zershyan.avernus.registry.attachment.RealmPresence;
 import io.zershyan.forgeattachment.api.ForgeAttachmentApi;
+import io.zershyan.forgeattachment.attachment.AttachmentSync;
 import io.zershyan.forgeattachment.attachment.AttachmentType;
+import io.zershyan.forgeattachment.attachment.IAttachmentHolder;
+import io.zershyan.forgeattachment.network.codec.ByteBufCodecs;
 import io.zershyan.forgeattachment.registry.ForgeAttachmentRegistries;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -39,6 +44,12 @@ public class AvernusAttachments {
     /** 境相临时属性的来源与清理范围，不存档、不复制给重生实体。 */
     public static final RegistryObject<AttachmentType<RealmAttributes>> REALM_ATTRIBUTES = register("realm_attributes", () -> AttachmentType
             .builder(() -> RealmAttributes.NONE)
+            .build());
+
+    /** 起跳倍率需要两端一致，仅同步实际数值，不同步服务端的属性来源。 */
+    public static final RegistryObject<AttachmentType<Double>> REALM_JUMP_BONUS = register("realm_jump_bonus", () -> AttachmentType
+            .builder(() -> 0.0)
+            .sync(ByteBufCodecs.DOUBLE)
             .build());
 
     /** 当前开启的领域尚未结算冷却；结算时即清除，不等待收束动画结束。 */
@@ -68,8 +79,7 @@ public class AvernusAttachments {
         return ForgeAttachmentApi.of(entity).map(holder -> holder.getExistingDataOrNull(type.get())).orElse(null);
     }
 
-    /** 清除冷却，供测试与重置流程使用，不在签名中暴露依赖类型。 */
-    /** 是否仍有境相属性来源，供不引用依赖类型的调用方使用。 */
+    /** 是否仍有境相属性来源。 */
     public static boolean hasRealmAttributes(Entity entity) {
         return has(entity, REALM_ATTRIBUTES);
     }
@@ -79,23 +89,30 @@ public class AvernusAttachments {
     }
 
     public static <T> void set(Entity entity, RegistryObject<AttachmentType<T>> type, T value) {
-        ForgeAttachmentApi.of(entity).ifPresent(holder -> holder.setData(type.get(), value));
+        ForgeAttachmentApi.of(entity).ifPresent(holder -> {
+            AttachmentType<T> attachment = type.get();
+            if (!Objects.equals(holder.setData(attachment, value), value)) sync(entity, holder, attachment);
+        });
     }
 
     public static void remove(Entity entity, RegistryObject<? extends AttachmentType<?>> type) {
-        ForgeAttachmentApi.of(entity).ifPresent(holder -> remove(holder, type.get()));
+        ForgeAttachmentApi.of(entity).ifPresent(holder -> {
+            AttachmentType<?> attachment = type.get();
+            if (holder.removeData(attachment) != null) sync(entity, holder, attachment);
+        });
     }
 
     public static boolean has(Entity entity, RegistryObject<? extends AttachmentType<?>> type) {
-        return ForgeAttachmentApi.of(entity).map(holder -> has(holder, type.get())).orElse(false);
+        return ForgeAttachmentApi.of(entity).map(holder -> holder.hasData(type.get())).orElse(false);
     }
 
-    private static <T> void remove(io.zershyan.forgeattachment.attachment.IAttachmentHolder holder, AttachmentType<T> type) {
-        holder.removeData(type);
-    }
-
-    private static <T> boolean has(io.zershyan.forgeattachment.attachment.IAttachmentHolder holder, AttachmentType<T> type) {
-        return holder.hasData(type);
+    /** ForgeAttachment 0.0.1 的内部 holder 未转发变更同步，须由实体显式同步。 */
+    private static void sync(Entity entity, IAttachmentHolder holder, AttachmentType<?> type) {
+        if (type.syncHandler() == null || entity.level().isClientSide) return;
+        if (entity instanceof ServerPlayer player && player.connection == null) return;
+        if (type == REALM_COOLDOWN.get()) {
+            if (entity instanceof ServerPlayer player) AttachmentSync.syncToPlayer(player, type, entity);
+        } else holder.syncData(type);
     }
 
     public static void doRegister(IEventBus modBus) {

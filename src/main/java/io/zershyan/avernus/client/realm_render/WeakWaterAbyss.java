@@ -65,8 +65,8 @@ final class WeakWaterAbyss {
         var buffer = Tesselator.getInstance().getBuilder();
         buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         for (var patches : tiles.values()) for (var patch : patches) patch.emit(buffer, eye, bottom);
-        var mesh = buffer.end();
-        if (mesh.isEmpty()) return;
+        var mesh = buffer.endOrDiscardIfEmpty();
+        if (mesh == null) return;
         // 贴近边界时入口可能在近平面之前，仍须写入深度，不能露出背后的地形。
         boolean clamped = glIsEnabled(GL_DEPTH_CLAMP);
         if (!clamped) glEnable(GL_DEPTH_CLAMP);

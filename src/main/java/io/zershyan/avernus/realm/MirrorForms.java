@@ -27,7 +27,8 @@ public final class MirrorForms {
 
     public static MirrorForm read(FriendlyByteBuf buf) {
         ResourceLocation aspect = buf.readResourceLocation();
-        int size = Math.min(buf.readVarInt(), MirrorForm.MAX_TRAITS);
+        int size = buf.readVarInt();
+        if (size < 0 || size > MirrorForm.MAX_TRAITS) throw new IllegalArgumentException("境印数量越界：" + size);
         List<ResourceLocation> traits = new ArrayList<>(size);
         for (int i = 0; i < size; i++) traits.add(buf.readResourceLocation());
         return new MirrorForm(aspect, traits);

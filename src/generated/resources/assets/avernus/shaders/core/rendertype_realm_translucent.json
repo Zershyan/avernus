@@ -1,4 +1,16 @@
 {
+  "attributes": [
+    "Position",
+    "Color",
+    "UV0",
+    "UV2",
+    "Normal"
+  ],
+  "blend": {
+    "dstrgb": "1-srcalpha",
+    "func": "add",
+    "srcrgb": "srcalpha"
+  },
   "fragment": "avernus:rendertype_realm_translucent",
   "samplers": [
     {

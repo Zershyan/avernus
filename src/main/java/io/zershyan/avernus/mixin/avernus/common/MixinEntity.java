@@ -38,11 +38,6 @@ public abstract class MixinEntity {
         if (ci.getReturnValueZ() && entity.level() == level) RealmManager.ownerTeleported(entity);
     }
 
-    @Inject(method = "tick", at = @At("HEAD"))
-    private void avernus$vehiclePresence(CallbackInfo ci) {
-        if (!((Object) this instanceof LivingEntity)) RealmPresenceTracker.tick((Entity) (Object) this);
-    }
-
     @Inject(method = "checkFallDamage", at = @At("HEAD"))
     private void avernus$beforeFallCheck(double dy, boolean onGround, BlockState state, BlockPos pos, CallbackInfo ci) {
         if ((Object) this instanceof LivingEntity living) RealmPresenceTracker.beforeFallCheck(living, onGround, dy, pos);
@@ -55,11 +50,18 @@ public abstract class MixinEntity {
         }
     }
 
-    @WrapOperation(method = {"checkInsideBlocks", "lambda$isInWall$11", "getBlockSpeedFactor", "getBlockJumpFactor",
-            "getOnPos(F)Lnet/minecraft/core/BlockPos;", "getBlockStateOn", "getBlockStateOnLegacy", "getInBlockState", "isInWall",
-            "move", "lambda$checkFallDamage$3"},
+    @WrapOperation(method = {"checkInsideBlocks", "getBlockSpeedFactor", "getBlockJumpFactor",
+            "getOnPos(F)Lnet/minecraft/core/BlockPos;", "getBlockStateOn", "getBlockStateOnLegacy", "move"},
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
     private BlockState avernus$interior(Level level, BlockPos pos, Operation<BlockState> original) {
+        return RealmPhysics.interior(level, (Entity) (Object) this, pos, original.call(level, pos));
+    }
+
+    @WrapOperation(method = {"lambda$isInWall$11(Lnet/minecraft/world/phys/AABB;Lnet/minecraft/core/BlockPos;)Z",
+            "lambda$checkFallDamage$3(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"},
+            remap = false, at = @At(value = "INVOKE", remap = true,
+            target = "Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
+    private BlockState avernus$lambdaInterior(Level level, BlockPos pos, Operation<BlockState> original) {
         return RealmPhysics.interior(level, (Entity) (Object) this, pos, original.call(level, pos));
     }
 

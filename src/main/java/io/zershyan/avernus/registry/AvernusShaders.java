@@ -38,7 +38,8 @@ public final class AvernusShaders {
         POST_BLOOM_DOWN("realm_post_bloom_down", DefaultVertexFormat.POSITION),
         POST_BLOOM_UP("realm_post_bloom_up", DefaultVertexFormat.POSITION),
         POST_COMPOSITE("realm_post_composite", DefaultVertexFormat.POSITION),
-        MIRROR("rendertype_realm_mirror", DefaultVertexFormat.NEW_ENTITY);
+        MIRROR("rendertype_realm_mirror", DefaultVertexFormat.NEW_ENTITY),
+        MIRROR_GHOST("rendertype_realm_mirror_ghost", DefaultVertexFormat.NEW_ENTITY);
 
         public final String path;
         private final VertexFormat format;

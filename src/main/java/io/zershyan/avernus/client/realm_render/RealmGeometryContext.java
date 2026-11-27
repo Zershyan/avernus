@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import io.zershyan.avernus.util.mixin.avernus.client.IMixinBufferBuilder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.chunk.RenderChunkRegion;
@@ -12,6 +13,7 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraftforge.client.model.lighting.FlatQuadLighter;
 import net.minecraftforge.client.model.lighting.QuadLighter;
 import net.minecraftforge.client.model.lighting.SmoothQuadLighter;
+import org.lwjgl.system.MemoryUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +48,11 @@ final class RealmGeometryContext {
             builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
             return builder;
         });
+    }
+
+    /** 1.20.1 的 BufferBuilder 不会自行释放 MemoryTracker 分配的堆外内存。 */
+    static void free(BufferBuilder builder) {
+        MemoryUtil.memFree(((IMixinBufferBuilder) builder).avernus$buffer());
     }
 
     QuadLighter getQuadLighter(boolean smoothLighting) {

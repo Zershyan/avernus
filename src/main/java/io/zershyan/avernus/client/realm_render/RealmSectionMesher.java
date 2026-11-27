@@ -20,7 +20,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.client.model.lighting.QuadLighter;
+
+import java.util.Map;
 
 /** 只烘焙与波纹无关的网格；实际可见面在绘制时由相邻列决定。 */
 final class RealmSectionMesher {
@@ -103,7 +106,7 @@ final class RealmSectionMesher {
             float u = dir.getAxis() == Direction.Axis.X ? c[2] : c[0];
             float v = dir.getAxis() == Direction.Axis.Y ? c[2] : 1.0F - c[1] * top;
             buffer.vertex(x + c[0], y + c[1] * top, z + c[2]).color(r, g, b, alpha)
-                    .uv(sprite.getU(u), sprite.getV(v)).uv2(light).normal(dir.getStepX(), dir.getStepY(), dir.getStepZ()).endVertex();
+                    .uv(sprite.getU(u * 16.0), sprite.getV(v * 16.0)).uv2(light).normal(dir.getStepX(), dir.getStepY(), dir.getStepZ()).endVertex();
         }
     }
 
@@ -134,8 +137,8 @@ final class RealmSectionMesher {
         }
     }
 
-    static void buildBoundary(RealmGeometryContext context, BlockPos origin) {
-        BlockAndTintGetter region = context.getRegion();
+    static void buildBoundary(RealmGeometryContext context, BlockPos origin, Map<BlockPos, ModelData> modelData) {
+        var region = context.getRegion();
         var dispatcher = Minecraft.getInstance().getBlockRenderer();
         var random = RandomSource.create();
         var side = new BlockPos.MutableBlockPos();
@@ -149,12 +152,37 @@ final class RealmSectionMesher {
             }
             if (hidden == 0) continue;
             BlockPos fixed = pos.immutable();
+            var model = dispatcher.getBlockModel(state);
+            var data = model.getModelData(region, fixed, state, modelData.getOrDefault(fixed, ModelData.EMPTY));
+            long seed = state.getSeed(fixed);
+            random.setSeed(seed);
             PoseStack pose = context.getPoseStack();
             pose.pushPose();
-            pose.translate(fixed.getX() - origin.getX(), fixed.getY() - origin.getY(), fixed.getZ() - origin.getZ());
+            var offset = state.getOffset(region, fixed);
+            pose.translate(fixed.getX() - origin.getX() + offset.x, fixed.getY() - origin.getY() + offset.y,
+                    fixed.getZ() - origin.getZ() + offset.z);
             try {
-                dispatcher.renderBatched(state, fixed, region, pose,
-                        context.getOrCreateChunkBuffer(ItemBlockRenderTypes.getChunkRenderType(state)), true, random);
+                for (RenderType type : model.getRenderTypes(state, random, data)) {
+                    boolean smooth = Minecraft.useAmbientOcclusion() && state.getLightEmission(region, fixed) == 0
+                            && model.useAmbientOcclusion(state, type);
+                    QuadLighter lighter = null;
+                    try {
+                        for (Direction dir : DIRECTIONS) {
+                            if ((hidden & (1 << dir.ordinal())) == 0) continue;
+                            random.setSeed(seed);
+                            var quads = model.getQuads(state, dir, random, data, type);
+                            if (quads.isEmpty()) continue;
+                            if (lighter == null) {
+                                lighter = context.getQuadLighter(smooth);
+                                lighter.setup(region, fixed, state);
+                            }
+                            VertexConsumer buffer = context.getOrCreateChunkBuffer(type);
+                            for (var quad : quads) lighter.process(buffer, pose.last(), quad, OverlayTexture.NO_OVERLAY);
+                        }
+                    } finally {
+                        if (lighter != null) lighter.reset();
+                    }
+                }
             } finally {
                 pose.popPose();
             }

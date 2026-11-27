@@ -31,6 +31,7 @@
     "avernus.common.MixinPiglinBruteAi",
     "avernus.common.MixinPointedDripstoneBlock",
     "avernus.common.MixinServerGamePacketListenerImpl",
+    "avernus.common.MixinServerLevel",
     "avernus.common.MixinServerPlayer",
     "avernus.common.MixinSwellGoal",
     "avernus.common.MixinTntBlock",
@@ -38,11 +39,13 @@
   ],
   "client": [
     "avernus.client.MixinBlockEntityRenderDispatcher",
+    "avernus.client.MixinBufferBuilder",
     "avernus.client.MixinCamera",
     "avernus.client.MixinEntityRenderDispatcher",
     "avernus.client.MixinEntityRenderer",
     "avernus.client.MixinLevelRenderer",
     "avernus.client.MixinRenderChunkInfo",
+    "avernus.client.MixinRenderRegionCache",
     "avernus.client.MixinScreenEffectRenderer",
     "avernus.client.MixinViewArea"
   ],

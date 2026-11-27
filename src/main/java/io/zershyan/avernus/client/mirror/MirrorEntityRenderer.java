@@ -96,6 +96,7 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
         boolean detailed = quality.atLeast(RealmFxQuality.MEDIUM);
         draw(buffers.getBuffer(MirrorRenderTypes.body(texture)), poseStack, texture, realm.seed(), pose, origin, t,
                 new Style(glow, 255, pose.crack(), detailed && !pose.whole(), false));
+        if (quality.mirrorGhosts == 0 || AvernusShaders.Effect.MIRROR_GHOST.get() == null) return;
         VertexConsumer ghosts = buffers.getBuffer(MirrorRenderTypes.ghost(texture));
         for (int k = 1; k <= quality.mirrorGhosts; k++) {
             MirrorChoreography.Pose ghost = MirrorChoreography.at(realm, home, target, t - k * GHOST_LAG);
@@ -106,24 +107,24 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
         }
     }
 
-    /** 顶点除位置、贴图坐标与法线之外的着色参数。 */
+    /** 按实体顶点格式写入颜色、贴图及两组附加坐标。 */
     private interface Paint {
-        void apply(VertexConsumer consumer, int hidden, int baryX, int baryY);
+        void apply(VertexConsumer consumer, float u, float v, int hidden, int baryX, int baryY);
     }
 
     /** 原版实体着色器格式：白色、无覆盖层、指定光照。 */
     private record Plain(int light) implements Paint {
         @Override
-        public void apply(VertexConsumer consumer, int hidden, int baryX, int baryY) {
-            consumer.color(255, 255, 255, 255).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light);
+        public void apply(VertexConsumer consumer, float u, float v, int hidden, int baryX, int baryY) {
+            consumer.color(255, 255, 255, 255).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light);
         }
     }
 
     /** 镜子着色器格式：颜色为境相辉光，UV1 为（裂纹量，描边量 | 残影与隐藏边标志位），UV2 为三角形重心坐标。 */
     private record Style(int glow, int alpha, float crack, boolean outline, boolean ghost) implements Paint {
         @Override
-        public void apply(VertexConsumer consumer, int hidden, int baryX, int baryY) {
-            consumer.color(glow >> 16 & 255, glow >> 8 & 255, glow & 255, alpha)
+        public void apply(VertexConsumer consumer, float u, float v, int hidden, int baryX, int baryY) {
+            consumer.color(glow >> 16 & 255, glow >> 8 & 255, glow & 255, alpha).uv(u, v)
                     .overlayCoords((int) (crack * 255.0F), (outline ? 255 : 0) + (ghost ? GHOST : 0) + hidden)
                     .uv2(baryX, baryY);
         }
@@ -262,8 +263,8 @@ public class MirrorEntityRenderer extends EntityRenderer<MirrorEntity> {
     private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v, Vector3f normal,
                                Paint paint, int hidden, int baryX, int baryY) {
         consumer.vertex(pose.pose(), x, y, z);
-        paint.apply(consumer, hidden, baryX, baryY);
-        consumer.uv(u, v).normal(pose.normal(), normal.x, normal.y, normal.z).endVertex();
+        paint.apply(consumer, u, v, hidden, baryX, baryY);
+        consumer.normal(pose.normal(), normal.x, normal.y, normal.z).endVertex();
     }
 
     @Override

@@ -27,7 +27,7 @@ void main() {
     vec3 pos = Position + ChunkOffset;
     gl_Position = ProjMat * ModelViewMat * vec4(pos, 1.0);
 
-    vertexDistance = fog_distance(pos, FogShape);
+    vertexDistance = fog_distance(ModelViewMat, pos, FogShape);
     lightColor = minecraft_sample_lightmap(Sampler2, UV2);
     vertexColor = Color;
     texCoord0 = UV0;

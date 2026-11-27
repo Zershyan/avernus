@@ -10,7 +10,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -94,8 +93,8 @@ public final class RealmEnvironment {
 
     // endregion
 
-    public static void render(RenderLevelStageEvent event) {
-        if (RealmRenderState.inWeakWaterAbyss(event.getCamera().getBlockPosition())) {
+    public static void render(Camera camera, Matrix4f view, Matrix4f projection, float partialTick, int renderTick) {
+        if (RealmRenderState.inWeakWaterAbyss(camera.getBlockPosition())) {
             try (var stack = MemoryStack.stackPush()) {
                 glClearBufferfv(GL_COLOR, 0, stack.floats(0F, 0F, 0F, 1F));
             }
@@ -105,8 +104,6 @@ public final class RealmEnvironment {
         ClientLevel level = mc.level;
         if (level == null) return;
         RealmFxQuality quality = ClientConfig.quality();
-        float partialTick = event.getPartialTick();
-        Camera camera = event.getCamera();
         Vec3 cam = camera.getPosition();
         Realm realm = current;
         float s = realm != null && profile != null ? strength(partialTick) : 0.0F;
@@ -124,8 +121,8 @@ public final class RealmEnvironment {
                 }
             }
         }
-        Matrix4f viewProj = new Matrix4f(event.getProjectionMatrix()).mul(event.getPoseStack().last().pose());
-        float time = (event.getRenderTick() % TIME_PERIOD_TICKS + partialTick) / 20.0F;
+        Matrix4f viewProj = new Matrix4f(projection).mul(view);
+        float time = (renderTick % TIME_PERIOD_TICKS + partialTick) / 20.0F;
         var frame = new RealmPostFrame(quality, s, realm, visual, wave, viewProj, new Matrix4f(viewProj).invert(), cam, time,
                 moments, RealmImpact.shock(moments, cam), RealmImpact.flash(moments, cam, quality));
         if (!frame.idle()) RealmPostChain.render(frame, mc.getMainRenderTarget());

@@ -12,6 +12,7 @@ import java.util.function.Function;
 /** 镜子专用图层：本体半透明写深度，残影加法混合不写深度；共用镜子着色器。 */
 final class MirrorRenderTypes extends RenderType {
     private static final ShaderStateShard MIRROR_SHADER = new ShaderStateShard(AvernusShaders.Effect.MIRROR::get);
+    private static final ShaderStateShard GHOST_SHADER = new ShaderStateShard(AvernusShaders.Effect.MIRROR_GHOST::get);
 
     private static final Function<ResourceLocation, RenderType> BODY = Util.memoize(texture -> create("avernus_mirror",
             DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true, CompositeState.builder()
@@ -23,7 +24,7 @@ final class MirrorRenderTypes extends RenderType {
 
     private static final Function<ResourceLocation, RenderType> GHOST = Util.memoize(texture -> create("avernus_mirror_ghost",
             DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, false, true, CompositeState.builder()
-                    .setShaderState(MIRROR_SHADER)
+                    .setShaderState(GHOST_SHADER)
                     .setTextureState(new TextureStateShard(texture, false, false))
                     .setTransparencyState(LIGHTNING_TRANSPARENCY)
                     .setCullState(NO_CULL)

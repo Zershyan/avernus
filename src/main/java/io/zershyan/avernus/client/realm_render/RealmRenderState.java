@@ -174,10 +174,6 @@ public final class RealmRenderState {
         return SUPPLEMENT;
     }
 
-    public static List<ChunkRenderDispatcher.RenderChunk> drawList() {
-        return DRAW;
-    }
-
     public static void setupShader(ShaderInstance shader) {
         int size = COLUMNS.size();
         shader.setSampler("RealmColumns", COLUMNS.texture());
@@ -198,22 +194,43 @@ public final class RealmRenderState {
         return false;
     }
 
-    public static void draw(ChunkRenderDispatcher.RenderChunk section, RenderType type, ShaderInstance shader, Runnable drawOriginal) {
+    public static void drawLayer(RenderType type, ShaderInstance shader, double camX, double camY, double camZ) {
+        boolean reverse = type == RenderType.translucent();
+        var iterator = DRAW.listIterator(reverse ? DRAW.size() : 0);
+        var offset = shader.CHUNK_OFFSET;
+        while (reverse ? iterator.hasPrevious() : iterator.hasNext()) {
+            var section = reverse ? iterator.previous() : iterator.next();
+            boolean vanilla = !section.getCompiledChunk().isEmpty(type);
+            if (!vanilla && !hasAdditional(section, type)) continue;
+            BlockPos origin = section.getOrigin();
+            if (offset != null) {
+                offset.set((float) (origin.getX() - camX), (float) (origin.getY() - camY), (float) (origin.getZ() - camZ));
+                offset.upload();
+            }
+            draw(section, type, shader, vanilla);
+        }
+        if (offset != null) {
+            offset.set(0.0F, 0.0F, 0.0F);
+            offset.upload();
+        }
+    }
+
+    private static void draw(ChunkRenderDispatcher.RenderChunk section, RenderType type, ShaderInstance shader, boolean vanilla) {
         BlockPos origin = section.getOrigin();
         long chunk = chunk(origin), pos = SectionPos.asLong(origin);
         var uniform = shader.getUniform("RealmSectionOrigin");
         var mode = shader.getUniform("RealmMeshMode");
         var label = shader.getUniform("RealmStyle");
         if (uniform == null || mode == null || label == null) {
-            if (!section.getCompiledChunk().isEmpty(type)) drawOriginal.run();
+            if (vanilla) drawVanilla(section, type);
             return;
         }
         uniform.set(origin.getX(), origin.getY(), origin.getZ());
         uniform.upload();
-        if (!section.getCompiledChunk().isEmpty(type)) {
+        if (vanilla) {
             mode.set(COLUMNS.minimumLayer(chunk) < origin.getY() + 16 || COLUMNS.abyss.hasTile(chunk) ? 0 : -1);
             mode.upload();
-            drawOriginal.run();
+            drawVanilla(section, type);
         }
         var range = COLUMNS.boundary(chunk);
         if (range != null && range.intersects(origin.getY()) && MESHES.hasLayer(pos, null, type)) {
@@ -229,5 +246,11 @@ public final class RealmRenderState {
             label.upload();
             MESHES.draw(pos, style.key(), type, origin, cameraPosition);
         }
+    }
+
+    private static void drawVanilla(ChunkRenderDispatcher.RenderChunk section, RenderType type) {
+        var vertices = section.getBuffer(type);
+        vertices.bind();
+        vertices.draw();
     }
 }

@@ -1,4 +1,7 @@
 {
+  "attributes": [
+    "Position"
+  ],
   "fragment": "avernus:realm_post_bloom_down",
   "samplers": [
     {

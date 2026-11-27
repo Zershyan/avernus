@@ -29,9 +29,10 @@ side="BOTH"
 [[dependencies."${mod_id}"]]
 modId="forgeattachment"
 mandatory=true
-versionRange="[0.0.1,)"
-ordering="NONE"
+versionRange="[0.0.1-1.20.1,)"
+ordering="AFTER"
 side="BOTH"
+referralUrl="https://www.curseforge.com/minecraft/mc-mods/forgeattachment/files/9481181"
 
 [[dependencies."${mod_id}"]]
 modId="mixinextras"

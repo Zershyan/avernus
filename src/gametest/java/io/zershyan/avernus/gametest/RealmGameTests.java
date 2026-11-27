@@ -4,6 +4,7 @@ import io.zershyan.avernus.Avernus;
 import io.zershyan.avernus.realm.Realm;
 import io.zershyan.avernus.realm.RealmManager;
 import io.zershyan.avernus.realm.RealmSets;
+import io.zershyan.avernus.registry.AvernusAttachments;
 import io.zershyan.avernus.registry.AvernusRealmAspects;
 import io.zershyan.avernus.registry.AvernusRealmTraits;
 import io.zershyan.avernus.api.realm.MirrorForm;
@@ -327,6 +328,37 @@ public final class RealmGameTests {
             realms.remove(realm.id());
         }
         helper.succeed();
+    }
+
+    @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_vehicle_tick", timeoutTicks = TIMEOUT)
+    public static void vehiclesAutomaticallyRecoverAfterRealmCloses(GameTestHelper helper) {
+        floor(helper);
+        fill(helper, Blocks.STONE, 5, H, 7, 9, H + 1, 9);
+        Realm realm = open(helper);
+        List<Entity> vehicles = new ArrayList<>();
+        double recoveredY = helper.absoluteVec(new Vec3(0, H + 2, 0)).y;
+        helper.startSequence()
+                .thenWaitUntil(() -> assertCovered(helper, realm, 5, 7, 9, 9))
+                .thenExecute(() -> {
+                    vehicles.add(helper.spawn(EntityType.BOAT, new Vec3(6.5, H, 8.5)));
+                    vehicles.add(helper.spawn(EntityType.MINECART, new Vec3(8.5, H, 8.5)));
+                    vehicles.forEach(vehicle -> vehicle.setNoGravity(true));
+                })
+                .thenIdle(8)
+                .thenExecute(() -> {
+                    for (Entity vehicle : vehicles) {
+                        helper.assertTrue(AvernusAttachments.has(vehicle, AvernusAttachments.PENDING_RECOVERY),
+                                "自然 tick 应记录脱困标记：" + vehicle.getType());
+                    }
+                    close(helper, realm);
+                })
+                .thenWaitUntil(() -> {
+                    for (Entity vehicle : vehicles) {
+                        helper.assertFalse(AvernusAttachments.has(vehicle, AvernusAttachments.PENDING_RECOVERY),
+                                "脱困后应清除标记：" + vehicle.getType());
+                        helper.assertTrue(vehicle.getY() >= recoveredY, "关闭领域后应恢复到真实地面：" + vehicle.getType());
+                    }
+                }).thenSucceed();
     }
 
     @GameTest(templateNamespace = "avernus", template = TEMPLATE, batch = "avernus_illusion", timeoutTicks = TIMEOUT)
